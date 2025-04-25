@@ -89,7 +89,7 @@ tomato: # Solanum_lycopersicum.SL3.0.57
 
 TAIR10:
   GENOME: /pi/mccb-umw/shared/OneStopRNAseq/genome/arabidopsis_thaliana/tair10/Arabidopsis_thaliana.TAIR10.dna_sm.toplevel.fa
-  GTF:  /pi/mccb-umw/shared/OneStopRNAseq/genome/arabidopsis_thaliana/tair10/Arabidopsis_thaliana.TAIR10.57.gtf
+  GTF:  /pi/mccb-umw/shared/OneStopRNAseq/genome/arabidopsis_thaliana/tair10/Arabidopsis_thaliana.TAIR10.57.kai.gtf
   ANNO_TAB:  https://raw.githubusercontent.com/radio1988/OneStopRNAseq/master/snakemake/workflow/resources/anno_tables/Arabidopsis_thaliana.TAIR10.57.anno_tab.txt
   GSEA_DB_PATH: None # workflow/resources/gsea_db/arabidopsis_thaliana/gsea_db/ # needs reformatting
   CleanUpRNAseqQC: False  # not working for non ensembl gtf
