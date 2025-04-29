@@ -42,6 +42,7 @@ rule featureCounts_EXON:
         {params.pe}  {params.mode} \
         {input.bams} > {log} 2>&1
         """
+        
 
 rule featureCounts_EXON_multiqc:
     input:

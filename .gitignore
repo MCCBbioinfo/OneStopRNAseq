@@ -5,3 +5,4 @@ test*/
 *.snakemake/
 snakemake/workflow/script/test_data/*
 test/
+

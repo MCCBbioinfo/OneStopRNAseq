@@ -10,8 +10,8 @@ if config['PAIR_END']:
         output is Phred33
         """
         input:
-            r1="fastq/{sample,[A-Za-z0-9_-]+}.R1.fastq.gz",
-            r2="fastq/{sample,[A-Za-z0-9_-]+}.R2.fastq.gz",
+            r1="fastqc/reformatted/{sample,[A-Za-z0-9_-]+}.R1.fastq.gz",
+            r2="fastqc/reformatted/{sample,[A-Za-z0-9_-]+}.R2.fastq.gz",
             r1_r2_check="fastqc/details_raw/{sample}.r1r2_checked"  # if r1 != r2, abort
         output:
             r1=temp("trimmed/{sample}.R1.fastq.gz"),
@@ -107,15 +107,28 @@ else:
 
 rule FastQC_Raw:
     input:
-        ["fastq/{sample}.R1.fastq.gz", "fastq/{sample}.R2.fastq.gz"] if config['PAIR_END'] \
-            else "fastq/{sample}.fastq.gz"
+        lambda wildcards: [
+            f"fastq/{wildcards.sample}.R1.fastq.gz",
+            f"fastq/{wildcards.sample}.R2.fastq.gz"
+        ] if config['PAIR_END'] else f"fastq/{wildcards.sample}.fastq.gz"
     output:
-        ["fastqc/details_raw/{sample}.R1_fastqc.html", "fastqc/details_raw/{sample}.R2_fastqc.html"] \
+        ["fastqc/details_raw/{sample}.R1_fastqc.html", "fastqc/details_raw/{sample}.R2_fastqc.html", temp("fastqc/reformatted/{sample}.R1.fastq.gz"), temp("fastqc/reformatted/{sample}.R2.fastq.gz")] \
             if config['PAIR_END'] else \
-            "fastqc/details_raw/{sample}_fastqc.html",
+            ["fastqc/details_raw/{sample}_fastqc.html", temp("fastqc/reformatted/{sample}.fastq.gz")],
         ["fastqc/details_raw/{sample}.R1_fastqc.zip", "fastqc/details_raw/{sample}.R2_fastqc.zip"] \
             if config['PAIR_END'] else \
             "fastqc/details_raw/{sample}_fastqc.zip"
+    params:
+        reformat_cmd = lambda wildcards: (
+            f"reformat.sh overwrite=t tossbrokenreads=t tossjunk=t in=fastq/{wildcards.sample}.R1.fastq.gz in2=fastq/{wildcards.sample}.R2.fastq.gz out=fastqc/reformatted/{wildcards.sample}.R1.fastq.gz out2=fastqc/reformatted/{wildcards.sample}.R2.fastq.gz 2> fastqc/details_raw/bbmap/reformat_{wildcards.sample}.txt || true"
+            if config["PAIR_END"]
+            else f"reformat.sh tossbrokenreads=t tossjunk=t overwrite=t in=fastq/{wildcards.sample}.fastq.gz out=fastqc/reformatted/{wildcards.sample}.fastq.gz 2> fastqc/details_raw/bbmap/reformat_{wildcards.sample}.txt || true"
+        ),
+        fastqc_input = lambda wildcards: (
+            f"fastqc/reformatted/{wildcards.sample}.R1.fastq.gz fastqc/reformatted/{wildcards.sample}.R2.fastq.gz"
+            if config["PAIR_END"]
+            else f"fastqc/reformatted/{wildcards.sample}.fastq.gz"
+        )
     conda:
         "../envs/fastqc.yaml"
     resources:
@@ -127,7 +140,13 @@ rule FastQC_Raw:
     benchmark:
         "fastqc/details_raw/log/{sample}.benchmark"
     shell:
-        "fastqc -t {threads} {input} -o fastqc/details_raw &> {log};"
+        """
+        mkdir -p fastqc/reformatted fastqc/details_raw/bbmap
+
+        {params.reformat_cmd} &>> {log}
+
+        fastqc -t {threads} {params.fastqc_input} -o fastqc/details_raw &>> {log}
+        """
 
 
 if config['PAIR_END']:
