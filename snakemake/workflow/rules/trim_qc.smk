@@ -120,7 +120,9 @@ rule FastQC_Raw:
             "fastqc/details_raw/{sample}_fastqc.zip"
     params:
         reformat_cmd = lambda wildcards: (
-            f"reformat.sh overwrite=t tossbrokenreads=t tossjunk=t in=fastq/{wildcards.sample}.R1.fastq.gz in2=fastq/{wildcards.sample}.R2.fastq.gz out=fastqc/reformatted/{wildcards.sample}.R1.fastq.gz out2=fastqc/reformatted/{wildcards.sample}.R2.fastq.gz 2> fastqc/details_raw/bbmap/reformat_{wildcards.sample}.txt || true"
+            f"reformat.sh overwrite=t tossbrokenreads=t tossjunk=t in=fastq/{wildcards.sample}.R1.fastq.gz in2=fastq/{wildcards.sample}.R2.fastq.gz out=fastqc/reformatted/{wildcards.sample}.R1.tmp.fastq.gz out2=fastqc/reformatted/{wildcards.sample}.R2.tmp.fastq.gz 2> fastqc/details_raw/bbmap/reformat_{wildcards.sample}.txt || true\n"
+            f"\trepair.sh overwrite=t tossbrokenreads=t tossjunk=t in=fastqc/reformatted/{wildcards.sample}.R1.tmp.fastq.gz in2=fastqc/reformatted/{wildcards.sample}.R2.tmp.fastq.gz out=fastqc/reformatted/{wildcards.sample}.R1.fastq.gz out2=fastqc/reformatted/{wildcards.sample}.R2.fastq.gz 2> fastqc/details_raw/bbmap/repair_{wildcards.sample}.txt || true\n"
+            f"\trm fastqc/reformatted/{wildcards.sample}.R1.tmp.fastq.gz fastqc/reformatted/{wildcards.sample}.R2.tmp.fastq.gz"
             if config["PAIR_END"]
             else f"reformat.sh tossbrokenreads=t tossjunk=t overwrite=t in=fastq/{wildcards.sample}.fastq.gz out=fastqc/reformatted/{wildcards.sample}.fastq.gz 2> fastqc/details_raw/bbmap/reformat_{wildcards.sample}.txt || true"
         ),
