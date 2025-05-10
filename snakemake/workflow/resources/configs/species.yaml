@@ -46,7 +46,7 @@ yeast: # Saccharomyces_cerevisiae.R64-1-1.90
   GTF: /pi/mccb-umw/shared/OneStopRNAseq/genome/saccharomyces_cerevisiae/Saccharomyces_cerevisiae.R64-1-1.90.gtf
   ANNO_TAB:  https://raw.githubusercontent.com/radio1988/OneStopRNAseq/dev/snakemake/workflow/resources/anno_tables/Saccharomyces_cerevisiae.R64-1-1.90.anno.txt
   GSEA_DB_PATH: workflow/resources/gsea_db/saccharomyces_cerevisiae/gsea_db/
-  CleanUpRNAseqQC: False  # not working for non ensembl gtf
+  CleanUpRNAseqQC: True  # not working for non ensembl gtf, testing
   CleanUpRNAseqCorrection: False
 
 rat: # Rattus_norvegicus.mRatBN7.2.109
