@@ -1,6 +1,8 @@
 import pandas as pd
 import sys
 
+# The following codes would skip NA values if the xlsx column contains NA, how to fix?
+
 
 def read_table(fname='meta/contrast.de.xlsx'):
     try:
@@ -9,7 +11,7 @@ def read_table(fname='meta/contrast.de.xlsx'):
         elif fname.endswith(".csv"):
             df = pd.read_csv(fname)
         elif fname.endswith(".xlsx"):
-            df = pd.read_excel(fname, engine='openpyxl')
+            df = pd.read_excel(fname, engine='openpyxl', keep_default_na=False, na_values=[])
         else:
             sys.exit("fname not xlsx nor txt")
     except:
