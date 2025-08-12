@@ -33,7 +33,7 @@ if fname.endswith('csv'):
     df = pd.read_csv(fname, keep_default_na=False, na_values=[])
 elif fname.endswith('xlsx'):
     df = pd.read_excel(fname, keep_default_na=False, na_values=[])
-elif fname.endswith('txt'):.
+elif fname.endswith('txt'):
     df = pd.read_table(fname, keep_default_na=False, na_values=[])
 df = df.replace("NA", "NA_")
 
