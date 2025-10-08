@@ -247,9 +247,9 @@ rule SalmonTE:
                 SalmonTE_output/condition.csv \
                 SalmonTE_output/EXPR.csv
 
-            python workflow/envs/SalmonTE/SalmonTE.py test --inpath=SalmonTE_output --outpath=SalmonTE_output/DET_contrast_${i} --conditions=control,treatment
-            mv SalmonTE_output/condition.csv SalmonTE_output/DET_contrast_${i}
-            mv SalmonTE_output/EXPR.csv SalmonTE_output/DET_contrast_${i}
+            python workflow/envs/SalmonTE/SalmonTE.py test --inpath=SalmonTE_output --outpath=SalmonTE_output/DET_contrast_${{i}} --conditions=control,treatment
+            mv SalmonTE_output/condition.csv SalmonTE_output/DET_contrast_${{i}}
+            mv SalmonTE_output/EXPR.csv SalmonTE_output/DET_contrast_${{i}}
         done
 
         mv SalmonTE_output/original_condition.csv SalmonTE_output/condition.csv
