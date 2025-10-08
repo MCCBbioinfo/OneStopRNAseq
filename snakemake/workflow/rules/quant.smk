@@ -237,11 +237,11 @@ rule SalmonTE:
         mv SalmonTE_output/condition.csv SalmonTE_output/original_condition.csv
         mv SalmonTE_output/EXPR.csv SalmonTE_output/original_EXPR.csv
 
-        for ((i=1; i<=num_cols; i++)); do
+        for ((i=1; i<=${{num_cols}}; i++)); do
             python workflow/envs/SalmonTE/prepare_condition.py \
                 {input.meta} \
                 {input.contrast} \
-                ${i} \
+                ${{i}} \
                 SalmonTE_output/original_condition.csv \
                 SalmonTE_output/original_EXPR.csv \
                 SalmonTE_output/condition.csv \
