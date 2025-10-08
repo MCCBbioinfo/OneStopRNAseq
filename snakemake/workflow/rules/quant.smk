@@ -193,7 +193,9 @@ rule SalmonTE:
             expand("trimmed/{sample}.fastq.gz",sample=SAMPLES),
         raw_reads2=expand("trimmed/{sample}.R2.fastq.gz",sample=SAMPLES) \
             if config['PAIR_END'] else \
-            expand("trimmed/{sample}.fastq.gz",sample=SAMPLES)
+            expand("trimmed/{sample}.fastq.gz",sample=SAMPLES),
+        meta="meta/meta.csv",
+        contrast="meta/contrast.de.csv"
     output:
         "SalmonTE_output/EXPR.csv"
     conda:
@@ -212,10 +214,46 @@ rule SalmonTE:
         """
         rm -rf SalmonTE_output/
         python workflow/envs/SalmonTE/SalmonTE.py --version >> {log}
-        python workflow/envs/SalmonTE/SalmonTE.py quant \
-        --reference={params.ref} --exprtype=count \
-        --num_threads={threads} \
-        {input.reads} > {log} 2>&1
+
+        # if custom repeat library is provided, use it
+        if [ -f custom_repeat_lib.fasta ]; then
+            python workflow/envs/SalmonTE/SalmonTE.py index \
+                --ref_name=custom \
+                --input_fasta=custom_repeat_lib.fasta > {log} 2>&1
+            python workflow/envs/SalmonTE/SalmonTE.py quant \
+                --reference=custom --exprtype=count \
+                --num_threads={threads} \
+                {input.reads} > {log} 2>&1
+        else
+            # if custom repeat library is not provided, use default
+            python workflow/envs/SalmonTE/SalmonTE.py quant \
+                --reference={params.ref} --exprtype=count \
+                --num_threads={threads} \
+                {input.reads} > {log} 2>&1
+        fi
+
+        # Perform statistical test
+        num_cols=$(awk -F, 'NR==1 {print NF}' {input.contrast})
+        mv SalmonTE_output/condition.csv SalmonTE_output/original_condition.csv
+        mv SalmonTE_output/EXPR.csv SalmonTE_output/original_EXPR.csv
+
+        for ((i=1; i<=num_cols; i++)); do
+            python workflow/envs/SalmonTE/prepare_condition.py \
+                {input.meta} \
+                {input.contrast} \
+                ${i} \
+                SalmonTE_output/original_condition.csv \
+                SalmonTE_output/original_EXPR.csv \
+                SalmonTE_output/condition.csv \
+                SalmonTE_output/EXPR.csv
+
+            python workflow/envs/SalmonTE/SalmonTE.py test --inpath=SalmonTE_output --outpath=SalmonTE_output/DET_contrast_${i} --conditions=control,treatment
+            mv SalmonTE_output/condition.csv SalmonTE_output/DET_contrast_${i}
+            mv SalmonTE_output/EXPR.csv SalmonTE_output/DET_contrast_${i}
+        done
+
+        mv SalmonTE_output/original_condition.csv SalmonTE_output/condition.csv
+        mv SalmonTE_output/original_EXPR.csv SalmonTE_output/EXPR.csv
         """
 
 rule Merge_TE_and_GE:
