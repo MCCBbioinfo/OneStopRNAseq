@@ -233,7 +233,7 @@ rule SalmonTE:
         fi
 
         # Perform statistical test
-        num_cols=$(awk -F, 'NR==1 {print NF}' {input.contrast})
+        num_cols=$(awk -F, 'NR==1 {{print NF}}' {input.contrast})
         mv SalmonTE_output/condition.csv SalmonTE_output/original_condition.csv
         mv SalmonTE_output/EXPR.csv SalmonTE_output/original_EXPR.csv
 
