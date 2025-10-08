@@ -238,7 +238,7 @@ rule SalmonTE:
         mv SalmonTE_output/EXPR.csv SalmonTE_output/original_EXPR.csv
 
         for ((i=1; i<=${{num_cols}}; i++)); do
-            python workflow/envs/SalmonTE/prepare_condition.py \
+            python workflow/envs/SalmonTE/scripts/prepare_condition.py \
                 {input.meta} \
                 {input.contrast} \
                 ${{i}} \
