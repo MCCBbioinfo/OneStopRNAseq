@@ -216,10 +216,10 @@ rule SalmonTE:
         python workflow/envs/SalmonTE/SalmonTE.py --version >> {log}
 
         # if custom repeat library is provided, use it
-        if [ -f custom_repeat_lib.fasta ]; then
+        if [ -f custom_repeat_lib.fa ]; then
             python workflow/envs/SalmonTE/SalmonTE.py index \
                 --ref_name=custom \
-                --input_fasta=custom_repeat_lib.fasta > {log} 2>&1
+                --input_fasta=custom_repeat_lib.fa > {log} 2>&1
             python workflow/envs/SalmonTE/SalmonTE.py quant \
                 --reference=custom --exprtype=count \
                 --num_threads={threads} \
