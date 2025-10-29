@@ -1,0 +1,26 @@
+name: deseq2salmonte
+channels:
+  - conda-forge
+  - bioconda
+  - anaconda
+  - defaults
+dependencies:
+  - r-base=4.0.2
+  - snakemake=7.24
+  - bioconductor-deseq2
+  - r-tidyverse
+  - r-scales
+  - r-writexl 
+  - r-biocmanager
+  - pandas
+  - docopt
+  - r-ashr
+  - r-devtools
+  - r-poiclaclu
+  - r-ggpubr
+  - bioconductor-enhancedvolcano
+  - r-ggrepel
+  - r-pheatmap
+  - r-openxlsx
+  - r-rmarkdown
+  - zip

@@ -9,7 +9,7 @@ rule DESeq2:
         "DESeq2/DESeq2.html",
         expand("DESeq2/rnk/{contrast}.rnk",contrast=DE_CONTRAST_NAMES)
     conda:
-        "../envs/deseq2.yaml"
+        "../envs/deseq2_salmonte.yaml"
     resources:
         mem_mb=lambda wildcards, attempt: attempt * 4000,
     params:

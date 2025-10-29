@@ -199,17 +199,23 @@ rule SalmonTE:
     output:
         "SalmonTE_output/EXPR.csv"
     conda:
-        "../envs/salmonte.yaml"  # test
+        "../envs/deseq2_salmonte.yaml"
     resources:
         mem_mb=lambda wildcards, attempt: attempt * 1000,
     params:
         ref=config['TE_REFERENCE'],
+        fdr=config['MAX_FDR'],
+        lfc=config['MIN_LFC'],
+        independentFilter=config["independentFilter"],
+        cooksCutoff=config["cooksCutoff"],
+        blackSamples=config['blackSamples'] if 'blackSamples' in config else "",
+        anno_tab=config['ANNO_TAB']
     threads:
         16
     log:
-        "log/SalmonTE.log"
+        "log/SalmonTE_output/SalmonTE.log"
     benchmark:
-        "log/SalmonTE.benchmark"
+        "log/SalmonTE_output/SalmonTE.benchmark"
     shell:
         """
         rm -rf SalmonTE_output/
@@ -232,7 +238,7 @@ rule SalmonTE:
                 {input.reads} > {log} 2>&1
         fi
 
-        # Perform statistical test
+        # Perform statistical test using SalmonTE built-in test, this does not perform batch correction
         num_cols=$(awk -F, 'NR==1 {{print NF}}' {input.contrast})
         mv SalmonTE_output/condition.csv SalmonTE_output/original_condition.csv
         mv SalmonTE_output/EXPR.csv SalmonTE_output/original_EXPR.csv
@@ -254,6 +260,19 @@ rule SalmonTE:
 
         mv SalmonTE_output/original_condition.csv SalmonTE_output/condition.csv
         mv SalmonTE_output/original_EXPR.csv SalmonTE_output/EXPR.csv
+
+        # Perform statistical test using DESeq2, this performs batch correction
+        Rscript workflow/envs/deseq2/DESeq2.R \
+            {input.meta} \
+            {input.contrast} \
+            SalmonTE_output/EXPR.csv \
+            SalmonTE_output/DET_batch_corrected \
+            {params.fdr} \
+            {params.lfc} \
+            {params.independentFilter} \
+            {params.cooksCutoff} \
+            {params.blackSamples} \
+            {params.anno_tab} > SalmonTE_output/DET_batch_corrected/DESeq2_log.txt 2>&1
         """
 
 rule Merge_TE_and_GE:

@@ -67,6 +67,9 @@ def target_input(config, ASCN):
             if config['START'] not in ['FASTQ']:
                 raise Exception('config Error: START and ASSEMBLY_ANALYSIS incompatible')
             l.append('stringtie/stringtie.merged.gtf')
+        
+        if config["TE_ANALYSIS"]:
+            l.append("SalmonTE_output/EXPR.csv")
 
     if config['START'] in ['FASTQ', 'BAM']:
         l.append('bam_qc/bam_qc.zip')

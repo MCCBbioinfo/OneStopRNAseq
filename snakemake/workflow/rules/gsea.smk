@@ -93,7 +93,7 @@ rule SingleBubblePlot:
     output:
         touch('gsea/gsea_bubble/log/{contrast}.SingleBubblePlot.done')
     conda:
-        "../envs/deseq2.yaml"
+        "../envs/deseq2_salmonte.yaml"
     resources:
         mem_mb=lambda wildcards, attempt: attempt * 4000
     log:
