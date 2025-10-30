@@ -322,11 +322,11 @@ process_deseq_res <- function(res = "lfcshrink.res",
   ##  Plots
   ggplot(data.frame(res), aes(x=pvalue))+
     geom_histogram(color="darkblue", fill="lightblue")
-  ggsave(file.path(paste0(name, '.pvalue.pdf')))
+  ggsave(file.path(outdir, paste0(name, '.pvalue.pdf')))
   
   ggplot(data.frame(res), aes(x=padj))+
     geom_histogram(color="darkblue", fill="lightblue")
-  ggsave(file.path(paste0(name, '.fdr.pdf')))
+  ggsave(file.path(outdir, paste0(name, '.fdr.pdf')))
   
   # Skip the following plots as there is no matching annotation file for TE
   # maplot(res, anno, paste0(name, '.maplot.shrunken_lfc.pdf'))
