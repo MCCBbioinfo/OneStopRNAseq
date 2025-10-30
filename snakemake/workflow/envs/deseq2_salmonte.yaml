@@ -23,4 +23,5 @@ dependencies:
   - r-pheatmap
   - r-openxlsx
   - r-rmarkdown
+  - r-writexls
   - zip
