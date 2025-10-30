@@ -262,6 +262,7 @@ rule SalmonTE:
         mv SalmonTE_output/original_EXPR.csv SalmonTE_output/EXPR.csv
 
         # Perform statistical test using DESeq2, this performs batch correction
+        mkdir SalmonTE_output/DET_batch_corrected
         Rscript workflow/envs/SalmonTE/scripts/DESeq2.R \
             {input.meta} \
             {input.contrast} \
