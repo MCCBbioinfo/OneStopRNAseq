@@ -200,6 +200,9 @@ def get_contrast_fnames(fname):
     for j in range(df.shape[1]):
         c1 = df.iloc[0, j]
         c2 = df.iloc[1, j]
+        # Skip if either c1 or c2 is empty
+        if pd.isna(c1) or pd.isna(c2):
+            continue
         c1 = c1.replace(" ","")
         c2 = c2.replace(" ","")
         c1 = re.sub(";$","",c1)  # remove extra ;
