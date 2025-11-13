@@ -341,8 +341,9 @@ process_deseq_res <- function(res="lfcshrink.res", res2="results.res", name='nam
     colnames(rnk) <- c("# Name","log2FoldChange_shrunken")
     rnk <- rnk[order(rnk$log2FoldChange_shrunken), ]
     rnk[, 1] <- toupper(rnk[, 1])
+    name_rnk <- gsub("-", ".", name) # to be consistent with Snakemake DE_CONTRAST_NAMES
     write.table(rnk, 
-                paste('rnk/', name, '.rnk', sep = ''), 
+                paste('rnk/', name_rnk, '.rnk', sep = ''), 
                 row.names = F, quote = F, sep='\t')
 
 
@@ -855,8 +856,6 @@ for (i in 1:dim(contrast.df)[2]){
   # parse 
   name1 <- parse_name(contrast.df[1,i])
   name2 <- parse_name(contrast.df[2, i])
-  name1 <- gsub("-", ".", name1$name) # to be consistent with Snakemake DE_CONTRAST_NAMES
-  name2 <- gsub("-", ".", name2$name)
   name <- paste(name1$name, name2$name, sep = "_vs_")
   if (nchar(name) > 100) {name = paste0('contrast', i)}
   print(paste(">>>", i, name))
