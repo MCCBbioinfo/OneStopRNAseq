@@ -50,10 +50,10 @@ rule GSEA:
         python workflow/script/gmt_to_upper.py -f {input.db} 1> {params.gmt_fmted} 2> {log}  # gene symbols to upper
         
         # Pre-filter out non-numeric rows
-        awk '($2 == $2+0)' {params.rnk_flat_file} > non_na_{params.rnk_flat_file}
+        awk '($2 == $2+0)' {params.rnk_flat_file} > filtered.rnk.txt
 
         workflow/envs/GSEA_4.3.2/gsea-cli.sh GSEAPreranked \
-        -gmx {params.gmt_fmted} -rnk non_na_{params.rnk_flat_file} -rpt_label {wildcards.db} \
+        -gmx {params.gmt_fmted} -rnk filtered.rnk.txt -rpt_label {wildcards.db} \
         -norm meandiv -nperm 1000  -scoring_scheme classic \
         -create_svgs {params.svg} -make_sets true  -rnd_seed timestamp -zip_report false \
         -set_max 15000 -set_min 0 \
