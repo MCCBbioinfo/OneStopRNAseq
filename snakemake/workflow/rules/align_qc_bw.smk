@@ -253,6 +253,7 @@ rule QoRTs:
         {params.aligner} \
         --maxReadLength {params.length} \
         --maxPhredScore 45 \
+        --runFunctions CigarOpDistribution,GCDistribution,GeneCalcs,NVC,QualityScoreDistribution,StrandCheck,chromCounts,cigarLocusCounts,readLengthDistro,writeBiotypeCounts,writeClippedNVC,writeGeneBody,writeGeneCounts,writeGenewiseGeneBody \
         {input.bam} {input.gtf} bam_qc/QoRTs/{wildcards.sample}/ &> {log}
         """
 
