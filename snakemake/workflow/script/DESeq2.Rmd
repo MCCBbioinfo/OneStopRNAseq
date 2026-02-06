@@ -23,7 +23,7 @@ params:
 
 ## User ReadME:
 - Please search for **“Warning”** in this report for possible problems before proceeding
--	Normalized expression values, differentially expressed genes, and various types of plots such as heatmap and volcano plots are in the DESeq2 folder. For example, TPM.xlsx contains normalized expression values.
+-	Normalized expression values, differentially expressed genes, and various types of plots such as DEG heatmaps based on z-score–scaled, variance-stabilized (VST) normalized counts, and volcano plots are in the DESeq2 folder. For example, TPM.xlsx contains normalized expression values.
 - Please use LFC_shrunken for Log2FoldChange, LFC_raw is not recommended
 - Please use FDR (padj) instead of raw p-values for identifying significantly differentially expressed genes.
 
@@ -386,13 +386,29 @@ process_deseq_res <- function(res="lfcshrink.res", res2="results.res", name='nam
     
     n1 <- dim(resdata.sig)[2]
     n2 <- dim(norm_exp)[2]
-    zscore.df <- zscore(resdata.sig[, (n1-n2+1):n1])
-    rownames(zscore.df) <- resdata.sig[,1]
-    colnames(zscore.df) <- gsub (":TPM", "", colnames(zscore.df))
-    colnames(zscore.df) <- gsub (":DESeq2NormalizedCount", "", colnames(zscore.df))
+    
+    # Use VST normalized count for DEG heatmap:
+    resdata2 <- merge(res.df, res2.df, by=0, sort=F, all.x=T)
+    resdata2 <- merge(anno, resdata2, by.x=1, by.y=1, sort=F, all.y=T)
+    norm_exp_vst <- vst(dds, blind = FALSE) %>% assay() %>% as.data.frame()
+    resdata2 <- merge(resdata2, norm_exp_vst, by.x=1, by.y=0, all.x=T, sort=F)
+    sig_idx2 <- resdata2$padj<max_fdr & abs(resdata2$log2FoldChange_shrunken) > min_lfc
+    sig_idx2[is.na(sig_idx2)] <- FALSE
+    resdata2.sig <- resdata2[sig_idx2,]
+    zscore.df <- zscore(resdata2.sig[, (n1-n2+1):n1])
+    rownames(zscore.df) <- resdata2.sig[,1]
     Heatmap(zscore.df, nclass = nclass,
             fname = paste(name, "heatmap", sep="."),
             main = paste(name, "LFC >", min_lfc, "FDR <", max_fdr ))
+    
+    # Legacy codes using DESeq2 normalized count for DEG heatmap, which is not appropriate for visualization compared to VST.
+    # zscore.df <- zscore(resdata.sig[, (n1-n2+1):n1])
+    # rownames(zscore.df) <- resdata.sig[,1]
+    # colnames(zscore.df) <- gsub (":TPM", "", colnames(zscore.df))
+    # colnames(zscore.df) <- gsub (":DESeq2NormalizedCount", "", colnames(zscore.df))
+    # Heatmap(zscore.df, nclass = nclass,
+    #         fname = paste(name, "heatmap", sep="."),
+    #         main = paste(name, "LFC >", min_lfc, "FDR <", max_fdr ))
 }
 ```
 
