@@ -301,3 +301,44 @@ rule Merge_TE_and_GE:
         python workflow/script/merge_featureCount_and_SalmonTE.py \
         {input.gene} {input.te} {output} > {log} 2>&1;
         """
+
+# Below are added by Kai
+# I would like to add a rule that quantify the reads using Salmon if the genome is human or mouse
+rule salmon:
+    input:
+        reads=["trimmed/{sample}.R1.fastq.gz", "trimmed/{sample}.R2.fastq.gz"] \
+            if config["PAIR_END"] else \
+            "trimmed/{sample}.fastq.gz"
+    output:
+        quant="feature_count/salmon/{sample}/quant.sf"
+    params:
+        salmon_index = lambda wildcards: config["SALMON_INDEX"],
+        libtype = "A",
+        outdir = lambda wildcards, output: "feature_count/salmon/{sample}".format(
+            sample=wildcards.sample,
+        ),
+        input_args = lambda wildcards, input: (
+            f"-1 {input.reads[0]} -2 {input.reads[1]}" if config["PAIR_END"] 
+            else f"-r {input.reads[0]}"
+        )
+    conda:
+        "../envs/salmon.yaml"
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt * 16000,
+    threads:
+        4
+    log:
+        "feature_count/salmon/{sample}/log/quant.log"
+    benchmark:
+        "feature_count/salmon/{sample}/log/quant.benchmark"
+    shell:
+        """
+        salmon quant \
+            -i {params.salmon_index} \
+            -l {params.libtype} \
+            {params.input_args} \
+            --validateMappings \
+            -p {threads} \
+            -o {params.outdir} \
+            > {log} 2>&1
+        """

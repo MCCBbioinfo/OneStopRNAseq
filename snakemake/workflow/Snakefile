@@ -55,6 +55,15 @@ def target_input(config, ASCN):
         l.append("fastqc/fastqc.zip")
         l.append("fastqc/CheckFile/all.txt")  # check fastq.gz size after trimming, if empty, abort
 
+        if config.get('SPECIES') in {'hg38', 'mm39'}:
+            l.extend(
+                expand(
+                    "feature_count/salmon/{sample}.s{strand}/quant.sf",
+                    sample=SAMPLES,
+                    strand=config['STRAND'],
+                )
+            )
+
         if config['CleanUpRNAseqQC']:
             l.append("CleanUpRNAseqQC/Fig7.PCA.showing.sample.variability.pdf")  # QC
 

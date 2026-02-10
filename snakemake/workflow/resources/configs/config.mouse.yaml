@@ -58,3 +58,6 @@ MSHEET: False      # only works for xlsx files with multiple sheets, each sheet 
 GSEA_ANALYSIS: True
 GSEA_NPLOTS: 2
 GSEA_PLOT_SVG: True
+
+SALMON_INDEX: /pi/mccb-umw/shared/OneStopRNAseq/transcriptome/mm39/salmon_index
+
