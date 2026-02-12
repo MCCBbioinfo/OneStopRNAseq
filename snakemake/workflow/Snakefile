@@ -58,9 +58,8 @@ def target_input(config, ASCN):
         if config.get('SPECIES') in {'hg38', 'mm39'}:
             l.extend(
                 expand(
-                    "feature_count/salmon/{sample}.s{strand}/quant.sf",
-                    sample=SAMPLES,
-                    strand=config['STRAND'],
+                    "feature_count/salmon/{sample}/quant.sf",
+                    sample=SAMPLES
                 )
             )
 
