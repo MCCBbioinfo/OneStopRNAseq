@@ -315,7 +315,7 @@ rule salmon:
     params:
         salmon_index = lambda wildcards: config["SALMON_INDEX"],
         libtype = "A",
-        outdir = lambda wildcards, output: "feature_count/salmon/{sample}".format(
+        outdir = lambda wildcards, output: "Salmon_output/{sample}".format(
             sample=wildcards.sample,
         ),
         input_args = lambda wildcards, input: (
@@ -329,9 +329,9 @@ rule salmon:
     threads:
         4
     log:
-        "feature_count/salmon/{sample}/log/quant.log"
+        "Salmon_output/{sample}/log/quant.log"
     benchmark:
-        "feature_count/salmon/{sample}/log/quant.benchmark"
+        "Salmon_output/{sample}/log/quant.benchmark"
     shell:
         """
         salmon quant \
