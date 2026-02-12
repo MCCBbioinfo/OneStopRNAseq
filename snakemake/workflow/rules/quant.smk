@@ -311,7 +311,7 @@ rule salmon:
             if config["PAIR_END"] else \
             "trimmed/{sample}.fastq.gz"
     output:
-        quant="feature_count/salmon/{sample}/quant.sf"
+        quant="Salmon_output/{sample}/quant.sf"
     params:
         salmon_index = lambda wildcards: config["SALMON_INDEX"],
         libtype = "A",
