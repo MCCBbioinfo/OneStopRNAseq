@@ -312,7 +312,7 @@ rule salmon:
     output:
         quant="feature_count/salmon/{sample}/quant.sf"
     params:
-        salmon_index = lambda wildcards: config["SALMON_INDEX_PATH"],
+        salmon_index = lambda wildcards: config["SALMON_INDEX"],
         libtype = "A",
         outdir = lambda wildcards, output: "feature_count/salmon/{sample}".format(
             sample=wildcards.sample,
