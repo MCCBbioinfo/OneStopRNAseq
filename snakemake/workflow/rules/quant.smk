@@ -2,6 +2,7 @@
 Gene Expression Quantification:
 - featureCounts
 - SalmonTE
+- Salmon
 """
 
 
