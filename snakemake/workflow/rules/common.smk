@@ -35,7 +35,7 @@ def read_species(config):
         if 'ANNO_TAB' not in config or not config['ANNO_TAB']:
             config['ANNO_TAB'] = species_config[SPECIES]['ANNO_TAB']
         if 'SALMON_INDEX' not in config or not config['SALMON_INDEX']:
-            config['SALMON_INDEX'] = species_config[SPECIES]['SALMON_INDEX_INDEX']
+            config['SALMON_INDEX'] = species_config[SPECIES]['SALMON_INDEX_PATH']
     else:
         sys.exit("species not found in " + fname)
 
