@@ -343,3 +343,23 @@ rule salmon:
             -o {params.outdir} \
             > {log} 2>&1
         """
+
+rule salmon_zip:
+    input:
+        expand(
+            "Salmon_output/{sample}/quant.sf",
+            sample=SAMPLES
+        )
+    output:
+        "Salmon_output/salmon.zip"
+    threads:
+        1
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt * 1000,
+    log:
+        "Salmon_output/salmon.zip.log"
+    shell:
+        """
+        rm -f {output} && \
+        zip -rq {output} Salmon_output -x {output} >> {log} 2>&1
+        """

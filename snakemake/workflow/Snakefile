@@ -62,6 +62,7 @@ def target_input(config, ASCN):
                     sample=SAMPLES
                 )
             )
+            l.append("Salmon_output/salmon.zip")
 
         if config['CleanUpRNAseqQC']:
             l.append("CleanUpRNAseqQC/Fig7.PCA.showing.sample.variability.pdf")  # QC
