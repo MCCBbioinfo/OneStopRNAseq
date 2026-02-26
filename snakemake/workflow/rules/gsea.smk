@@ -17,6 +17,7 @@ rule GSEA:
     output:
         html="gsea/{fname}/{db}.GseaPreranked/index.html",
         edb="gsea/{fname}/{db}.GseaPreranked/edb/results.edb"
+    shadow: "minimal"
     conda:
         "../envs/java11.yaml"  # test
     resources:
