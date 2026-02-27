@@ -142,7 +142,7 @@ if config["GSEA_ANALYSIS"]:
             1
         priority: 100
         shell:
-            "python {input.gsea_bubble} -edbs {input} -output {output} -alpha 0.05 -topn {wildcards.topn} &> {log}"
+            "python workflow/script/gsea_bubble.py -edbs {input} -output {output} -alpha 0.05 -topn {wildcards.topn} &> {log}"
 
     rule Compress_BubblePlots:
         input:
