@@ -20,7 +20,7 @@ rule GSEA:
     output:
         html="gsea/{fname}/{db}.GseaPreranked/index.html",
         edb="gsea/{fname}/{db}.GseaPreranked/edb/results.edb"
-    shadow: "minimal"
+    # shadow: "minimal" # did not solve the racing issue
     conda:
         "../envs/java11.yaml"  # test
     resources:
@@ -54,10 +54,10 @@ rule GSEA:
         python {input.gmt_to_upper} -f {input.db} 1> {params.gmt_fmted} 2> {log}  # gene symbols to upper
         
         # Pre-filter out non-numeric rows
-        awk '($2 == $2+0)' {params.rnk_flat_file} > filtered.rnk.txt
+        awk '($2 == $2+0)' {params.rnk_flat_file} > filtered.{input.rnk}.txt
 
         workflow/envs/GSEA_4.3.2/gsea-cli.sh GSEAPreranked \
-        -gmx {params.gmt_fmted} -rnk filtered.rnk.txt -rpt_label {wildcards.db} \
+        -gmx {params.gmt_fmted} -rnk filtered.{input.rnk}.txt -rpt_label {wildcards.db} \
         -norm meandiv -nperm 1000  -scoring_scheme classic \
         -create_svgs {params.svg} -make_sets true  -rnd_seed timestamp -zip_report false \
         -set_max 15000 -set_min 0 \
