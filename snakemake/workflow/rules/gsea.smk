@@ -13,7 +13,10 @@ rule GSEA:
     """
     input:
         rnk=lambda wildcards: input_rnk_fname1(wildcards,config),
-        db=lambda wildcards: os.path.join(config['GSEA_DB_PATH'],wildcards["db"])
+        db=lambda wildcards: os.path.join(config['GSEA_DB_PATH'],wildcards["db"]),
+        rnk_to_upper = "workflow/script/rnk_to_upper.py", # fix the shadow side effect
+        gmt_to_upper = "workflow/script/gmt_to_upper.py",
+        gsea_bubble = "workflow/script/gsea_bubble.py"
     output:
         html="gsea/{fname}/{db}.GseaPreranked/index.html",
         edb="gsea/{fname}/{db}.GseaPreranked/edb/results.edb"
@@ -47,8 +50,8 @@ rule GSEA:
         rm -rf gsea/{wildcards.fname}/{wildcards.db}.GseaPreranked/  # avoid dir structure mistake
         rm -rf gsea/{wildcards.fname}/error_{wildcards.db}*GseaPreranked*/  # avoid confusion of temp files in multiple run attempts
 
-        python workflow/script/rnk_to_upper.py {input.rnk} >> {log} 2>&1;  # fix gene symbol error; standardize file format (xlsx, rnk, etc)
-        python workflow/script/gmt_to_upper.py -f {input.db} 1> {params.gmt_fmted} 2> {log}  # gene symbols to upper
+        python {input.rnk_to_upper} {input.rnk} >> {log} 2>&1;  # fix gene symbol error; standardize file format (xlsx, rnk, etc)
+        python {input.gmt_to_upper} -f {input.db} 1> {params.gmt_fmted} 2> {log}  # gene symbols to upper
         
         # Pre-filter out non-numeric rows
         awk '($2 == $2+0)' {params.rnk_flat_file} > filtered.rnk.txt
@@ -139,7 +142,7 @@ if config["GSEA_ANALYSIS"]:
             1
         priority: 100
         shell:
-            "python workflow/script/gsea_bubble.py -edbs {input} -output {output} -alpha 0.05 -topn {wildcards.topn} &> {log}"
+            "python {input.gsea_bubble} -edbs {input} -output {output} -alpha 0.05 -topn {wildcards.topn} &> {log}"
 
     rule Compress_BubblePlots:
         input:
