@@ -504,7 +504,11 @@ def split_msheet_rnk_file(config):
             single_sheet_fname = 'meta/' + config_RNKS_
             if Path(single_sheet_fname).exists():
                 saved = pd.read_table(single_sheet_fname)
-                if all(sheet_df.iloc[:, 1] - saved.iloc[:, 1] < 1e-10):  # small error float comparison
+                val1 = pd.to_numeric(sheet_df.iloc[:, 1], errors = 'coerce')
+                val2 = pd.to_numeric(saved.iloc[:, 1], errors = 'coerce')
+
+                if all(val1 - val2 < 1e-10):
+                #if all(sheet_df.iloc[:, 1] - saved.iloc[:, 1] < 1e-10):  # small error float comparison
                     continue  # skip if the same to avoid re-run rule GSEA
             sheet_df.to_csv(single_sheet_fname,sep="\t",index=False)
 
