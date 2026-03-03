@@ -390,7 +390,14 @@ process_deseq_res <- function(res="lfcshrink.res", res2="results.res", name='nam
     # Use VST normalized count for DEG heatmap:
     resdata2 <- merge(res.df, res2.df, by=0, sort=F, all.x=T)
     resdata2 <- merge(anno, resdata2, by.x=1, by.y=1, sort=F, all.y=T)
-    norm_exp_vst <- vst(dds, blind = FALSE) %>% assay() %>% as.data.frame()
+    # norm_exp_vst <- vst(dds, blind = FALSE) %>% assay() %>% as.data.frame()
+    norm_exp_vst <- tryCatch({
+        assay(vst(dds, blind = FALSE))
+    }, error = function(e) {
+        warning("Standard VST failed, falling back to shift-log (normTransform)")
+        assay(normTransform(dds))
+    }) %>% as.data.frame()
+    
     resdata2 <- merge(resdata2, norm_exp_vst, by.x=1, by.y=0, all.x=T, sort=F)
     sig_idx2 <- resdata2$padj<max_fdr & abs(resdata2$log2FoldChange_shrunken) > min_lfc
     sig_idx2[is.na(sig_idx2)] <- FALSE
@@ -710,12 +717,26 @@ if (length(levels(batch)) > 1){
                                 design = ~  0 + group)  # converted to alph-order
 }
 dds
-if (is.error(dds <-DESeq(dds))){
-  cat("using manual dispersion estimation")
+# if (is.error(dds <-DESeq(dds))){
+#   cat("using manual dispersion estimation")
+#   dds <- estimateSizeFactors(dds)
+#   dds <- estimateDispersionsGeneEst(dds)
+#   dispersions(dds) <- mcols(dds)$dispGeneEst
+#   dds <- nbinomWaldTest(dds)
+# }
+dds_test <- try(DESeq(dds), silent = TRUE)
+
+if (inherits(dds_test, "try-error")) {
+  warning("Standard DESeq failed. Using manual dispersion estimation...\n")
+  
+  # Manual steps
   dds <- estimateSizeFactors(dds)
   dds <- estimateDispersionsGeneEst(dds)
   dispersions(dds) <- mcols(dds)$dispGeneEst
   dds <- nbinomWaldTest(dds)
+  
+} else {
+  dds <- dds_test
 }
 resultsNames(dds)
 #saveRDS(dds, file = 'deseq2.dds.rds')
@@ -921,4 +942,3 @@ for (i in 1:dim(contrast.df)[2]){
 save.image()
 sessionInfo()
 ```
-

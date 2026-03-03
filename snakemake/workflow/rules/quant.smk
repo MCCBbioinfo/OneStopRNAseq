@@ -263,6 +263,7 @@ rule SalmonTE:
         mv SalmonTE_output/original_EXPR.csv SalmonTE_output/EXPR.csv
 
         # Perform statistical test using DESeq2, this performs batch correction
+        ## Note that it is best to merge TE with genes when using DESeq2 so it can model a more stable dispersion in case the TE composition varies across samples
         mkdir SalmonTE_output/DET_batch_corrected
         Rscript workflow/envs/SalmonTE/scripts/DESeq2.R \
             {input.meta} \
