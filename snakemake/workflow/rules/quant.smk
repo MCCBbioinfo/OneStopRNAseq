@@ -321,7 +321,7 @@ rule salmon:
         ),
         input_args = lambda wildcards, input: (
             f"-1 {input.reads[0]} -2 {input.reads[1]}" if config["PAIR_END"] 
-            else f"-r {input.reads[0]}"
+            else f"-r {input.reads}"
         )
     conda:
         "../envs/salmon.yaml"
