@@ -337,8 +337,9 @@ process_deseq_res <- function(res="lfcshrink.res", res2="results.res", name='nam
     colnames(rnk) <- c("# Name","log2FoldChange_shrunken")
     rnk <- rnk[order(rnk$log2FoldChange_shrunken), ]
     rnk[, 1] <- toupper(rnk[, 1])
+    name_rnk <- gsub("-", ".", name) # to be consistent with Snakemake DE_CONTRAST_NAMES
     write.table(rnk, 
-                paste('rnk/', name, '.rnk', sep = ''), 
+                paste('rnk/', name_rnk, '.rnk', sep = ''), 
                 row.names = F, quote = F, sep='\t')
 
 

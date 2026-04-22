@@ -253,6 +253,7 @@ rule QoRTs:
         {params.aligner} \
         --maxReadLength {params.length} \
         --maxPhredScore 45 \
+        --runFunctions CigarOpDistribution,GCDistribution,GeneCalcs,NVC,QualityScoreDistribution,StrandCheck,chromCounts,cigarLocusCounts,readLengthDistro,writeBiotypeCounts,writeClippedNVC,writeGeneBody,writeGeneCounts,writeGenewiseGeneBody \
         {input.bam} {input.gtf} bam_qc/QoRTs/{wildcards.sample}/ &> {log}
         """
 
@@ -280,7 +281,7 @@ rule QoRTs_MultiPlot:
         mv bam_qc/QoRTs_MultiPlot/plot-sample* bam_qc/QoRTs_MultiPlot/details/;
         """
 
-rule zip_bam_qc:
+rule compress_bam_qc:
     input:
         "bam_qc/QoRTs_MultiPlot/plot-basic.pdf",
         "bam_qc/STAR_Align_summary_multiqc_report.html" if config['ALIGNER'] == 'STAR' and config[

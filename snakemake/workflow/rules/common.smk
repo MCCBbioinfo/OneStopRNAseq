@@ -1,18 +1,73 @@
-import pandas as pd
 import sys
 import re
 import os
+from pathlib import Path
 import math
 import shutil
+import pandas as pd
+import yaml
 
 
-def check_config(config):
+def read_species(config):
+    """
+    read config.yaml for species
+    read species.yaml for genome, gtf, anno_tab, gsea_db_path
+    assume 'workflow/resources/configs/species.yaml'
+    update config with genome, gtf, anno_tab, gsea_db_path, salmon_index in species.yaml, ONLY if not specified in config.yaml
+    return updated config
+    """
+    if 'SPECIES_YAML_FILE' in config:
+        fname = config['SPECIES_YAML_FILE']
+    else:
+        fname = 'workflow/resources/configs/species.yaml'
+
+    with open(fname,'r') as file:
+        species_config = yaml.safe_load(file)
+
+    if config['SPECIES'] in species_config:
+        SPECIES = config['SPECIES']
+        if 'GSEA_DB_PATH' not in config or not config['GSEA_DB_PATH']:
+            config['GSEA_DB_PATH'] = species_config[SPECIES]['GSEA_DB_PATH']
+        if 'GENOME' not in config or not config['GENOME']:
+            config['GENOME'] = species_config[SPECIES]['GENOME']
+        if 'GTF' not in config or not config['GTF']:
+            config['GTF'] = species_config[SPECIES]['GTF']
+        if 'ANNO_TAB' not in config or not config['ANNO_TAB']:
+            config['ANNO_TAB'] = species_config[SPECIES]['ANNO_TAB']
+        if 'SALMON_INDEX' not in config or not config['SALMON_INDEX']:
+            config['SALMON_INDEX'] = species_config[SPECIES]['SALMON_INDEX_PATH']
+    else:
+        sys.exit("species not found in " + fname)
+
+    if 'CleanUpRNAseqQC' in species_config[SPECIES]:
+        config['CleanUpRNAseqQC'] = species_config[SPECIES]['CleanUpRNAseqQC']
+
+    if 'CleanUpRNAseqCorrection' in species_config[SPECIES]:
+        config['CleanUpRNAseqCorrection'] = species_config[SPECIES]['CleanUpRNAseqCorrection']
+
+    return config
+
+
+def check_and_update_config(config):
     """
     Check conflicts in config.yaml,
     call this in main snakefile
     sys.exit if not compatible
+
+    Also updates: config['INDEX'] and config['RNKS']
     """
-    # INTRON and gDNA correction, only can choose one at most
+    config = read_species(config)
+
+
+    if config["START"] != 'RNK':
+        check_CONTRAST_and_META(config)
+
+    if config['START'] != 'RNK':
+        SAMPLES = read_table(config['META']).iloc[:, 0].tolist()
+    else:
+        SAMPLES = ['placeholder']
+
+    # INTRON and gDNA correction are incompatible
     if config['START'] == 'FASTQ' and config["INTRON"] and config["CleanUpRNAseqCorrection"]:
         message = "INTRON mode and CleanUpRNAseqCorrection is incompatible.\n" + \
                   "gDNA correction is only possible for exon level rnaseq quantification"
@@ -21,9 +76,52 @@ def check_config(config):
     if config['ALIGNER'] != 'STAR' and config['ALIGNER'] != 'HISAT2':
         sys.exit("config['ALIGNER'] not STAR nor HISAT2")
 
+    config = uncompress_gzip_genome_files(config)  # genome, vcf, gtf
+    config['INDEX'] = config['GENOME'] + '.star_idx'
 
-# SPECIES and Analysis options
-# Not now
+    if config['START'] == 'FASTQ' and 'MAX_FASTQ_SIZE' in config:  # skip check if config ignored this
+        check_fastq_size(config,SAMPLES)
+
+    if config['DESEQ2_ANALYSIS'] and config['START'] in ["FASTQ", "BAM", "COUNT"]:
+        DE_CONTRAST_NAMES = get_contrast_fnames(config['CONTRAST_DE'])
+        DE_CONTRAST_NAMES = [x.replace("-",'.') for x in DE_CONTRAST_NAMES]
+    else:
+        DE_CONTRAST_NAMES = ["placeholder"]
+
+    # for DEXSeq
+    if config['DEXSEQ_ANALYSIS'] and config["START"] in ["FASTQ", "BAM"]:
+        AS_CONTRAST_NAMES = get_contrast_fnames(config['CONTRAST_AS'])
+    else:
+        AS_CONTRAST_NAMES = ["placeholder"]
+    AS_CONTRAST_NAMES = [l.replace('.','_') for l in DE_CONTRAST_NAMES]
+
+    # For MSHEET RNK START GSEA, split RNK files before DAG is built
+    if config['GSEA_DB_PATH'] == 'None':
+        config['GSEA_ANALYSIS'] = False
+
+    if config['START'] == "RNK" and 'MSHEET' in config and config['MSHEET']:
+        rnk_file_names = split_msheet_rnk_file(config)
+        config['RNKS'] = rnk_file_names  # only basename of rnk files
+
+    if config["GSEA_ANALYSIS"]:
+        gsea_dbs = []
+        for f in os.listdir(config['GSEA_DB_PATH']):
+            if f.endswith('.gmt'):
+                gsea_dbs.append(f)
+        gsea_dbs = [os.path.basename(x) for x in gsea_dbs]
+        if len(gsea_dbs) < 1:
+            sys.exit("No gsea databases found in " + config['GSEA_DB_PATH'])
+        config["GSEA_DB_NAMES"] = gsea_dbs
+
+    config["GSEA_TOPNS"] = [20, 100, 1000]
+
+    return config, SAMPLES, DE_CONTRAST_NAMES, AS_CONTRAST_NAMES
+
+
+def checkFileInput(wildcards):
+    check = "fastqc/CheckFile/CheckFile.{sample}.txt" if config['START'] == 'FASTQ' else 'workflow_full_DAG.pdf'
+    return check
+
 
 def uncompress_gzip_genome_files(config):
     """
@@ -104,6 +202,9 @@ def get_contrast_fnames(fname):
     for j in range(df.shape[1]):
         c1 = df.iloc[0, j]
         c2 = df.iloc[1, j]
+        # Skip if either c1 or c2 is empty
+        if pd.isna(c1) or pd.isna(c2):
+            continue
         c1 = c1.replace(" ","")
         c2 = c2.replace(" ","")
         c1 = re.sub(";$","",c1)  # remove extra ;
@@ -217,46 +318,6 @@ def DESeq2_input(config):
         return folder + '/counts.' + config['MODE'] + '.txt'
 
 
-def input_rnk_fname1(wildcards, config):
-    if config['START'] == 'RNK':
-        fname1 = 'meta/' + wildcards['fname']  # meta/test1.rnk.txt
-    elif config['START'] == 'FASTQ' and config['CleanUpRNAseqCorrection']:
-        fname1 = "CleanUpRNAseqDE/rnk/" + wildcards['fname'] + ".rnk"
-    else:
-        fname1 = "DESeq2/rnk/" + wildcards['fname'] + ".rnk"
-    return fname1
-
-
-def rnk_fname1_to_fname2(fname1):
-    '''
-    xxx.rnk -> xxx.rnk.txt
-    xxx.rnk.xlsx -> xxx.rnk.txt
-    xxx.rnk.txt -> xxx.rnk.txt
-    internal
-    '''
-    import re
-    import sys
-    if fname1.endswith('.rnk.xlsx'):
-        return re.sub('.rnk.xlsx$','.rnk.txt',fname1)
-    elif fname1.endswith('.rnk'):
-        return fname1 + ".txt"
-    elif fname1.endswith('.rnk.txt'):
-        return fname1
-    else:
-        sys.stderr.write(fname1)
-        sys.exit('rnk file type not rnk, rnk.txt, or rnk.xlsx')
-        return None
-
-
-def input_rnk_fname2(wildcards, config):
-    '''
-    the corresponding flat rnk.txt file name (fname1) for corresponding fname1
-    '''
-    fname1 = input_rnk_fname1(wildcards,config)
-    return rnk_fname1_to_fname2(fname1)
-
-
-### Get parameters ###
 RMATS_STRANDNESS = {0: 'fr-unstranded', 1: 'fr-firststrand', 2: 'fr-secondstrand'}
 
 
@@ -399,7 +460,7 @@ def check_meta_file(fname="meta/meta.txt"):
         raise ValueError(fname + " does not have three columns: SAMPLE_LABEL\tGROUP_LABEL\tBATCH\n\n")
 
 
-def check_meta_data(config):
+def check_CONTRAST_and_META(config):
     if config['DESEQ2_ANALYSIS']:
         check_contrast_file(config['CONTRAST_DE'])
     if config['RMATS_ANALYSIS'] or config['DEXSEQ_ANALYSIS']:
@@ -408,22 +469,112 @@ def check_meta_data(config):
         check_meta_file(config['META'])
 
 
-def GSEA_OUTPUT(config):
+def split_msheet_rnk_file(config):
+    """
+    split MSHEET into multiple rnk files, and change config['RNKS'] to the new list
+    only active if config['MSHEET'] is True and config['START'] is 'RNK'
+    caveat: you can't run this function more than once, the second run will fail because the updated config['RNKS']
+            is not MSHEET
+    """
+    if config['START'] == "RNK" and 'MSHEET' in config and config['MSHEET']:
+        if len(config['RNKS']) > 1:
+            raise ValueError("If MSHEET is True, only one RNK file is allowed")
+
+        msheet_fname = os.path.join('meta/',
+            config['RNKS'][0])  # convention, always put rnk under meta/,and skip meta/ in config
+        if not msheet_fname.endswith(".xlsx"):
+            raise ValueError("If MSHEET is True, the RNK file must be xlsx")
+
+        #split sheets
+        dfs = pd.read_excel(msheet_fname,sheet_name=None)
+        rnk_file_names = []
+        for sheet_name, sheet_df in dfs.items():
+            sheet_df.columns = sheet_df.columns.str.replace("#","")
+            sheet_df.columns = sheet_df.columns.str.strip()
+            sheet_df.columns = sheet_df.columns.str.replace(" ","_")
+            # column name need # for GSEA to recognize
+            if not sheet_df.columns[0].startswith("#"):
+                sheet_df.columns = ["# " + sheet_df.columns[0]] + sheet_df.columns[1:].to_list()
+            # index element is immutable
+            # comparison_name for snakemake can't have #
+            comparison_name = sheet_df.columns[0].replace("#","").strip()
+            config_RNKS_ = f"{comparison_name}.rnk.txt"  # to replace config['RNKS']
+            rnk_file_names.append(config_RNKS_)
+
+            single_sheet_fname = 'meta/' + config_RNKS_
+            if Path(single_sheet_fname).exists():
+                saved = pd.read_table(single_sheet_fname)
+                val1 = pd.to_numeric(sheet_df.iloc[:, 1], errors = 'coerce')
+                val2 = pd.to_numeric(saved.iloc[:, 1], errors = 'coerce')
+
+                if all(val1 - val2 < 1e-10):
+                #if all(sheet_df.iloc[:, 1] - saved.iloc[:, 1] < 1e-10):  # small error float comparison
+                    continue  # skip if the same to avoid re-run rule GSEA
+            sheet_df.to_csv(single_sheet_fname,sep="\t",index=False)
+
+    return rnk_file_names
+
+
+def input_rnk_fname1(wildcards, config):
+    if config['START'] == 'RNK' and 'MSHEET' in config and config['MSHEET']:
+        fname1 = 'meta/' + wildcards['fname']  # meta/test1.rnk.txt
+    elif config['START'] == 'RNK':  # not MSHEET
+        fname1 = 'meta/' + wildcards['fname']  # meta/test1.rnk.txt
+    elif config['START'] == 'FASTQ' and config['CleanUpRNAseqCorrection']:
+        fname1 = "CleanUpRNAseqDE/rnk/" + wildcards['fname'] + ".rnk"
+    else:
+        fname1 = "DESeq2/rnk/" + wildcards['fname'] + ".rnk"
+    return fname1
+
+
+def rnk_fname1_to_fname2(fname1):
+    '''
+    xxx.rnk -> xxx.rnk.txt
+    xxx.rnk.xlsx -> xxx.rnk.txt
+    xxx.rnk.txt -> xxx.rnk.txt
+    internal
+    '''
+    if fname1.endswith('.rnk.xlsx'):
+        return re.sub('.rnk.xlsx$','.rnk.txt',fname1)
+    elif fname1.endswith('.rnk'):
+        return fname1 + ".txt"
+    elif fname1.endswith('.rnk.txt'):
+        return fname1
+    else:
+        sys.stderr.write(fname1)
+        sys.exit('rnk file type not rnk, rnk.txt, or rnk.xlsx')
+        return None
+
+
+def input_rnk_fname2(wildcards, config):
+    '''
+    the corresponding flat rnk.txt file name (fname1) for corresponding fname1
+    '''
+    fname1 = input_rnk_fname1(wildcards,config)
+    return rnk_fname1_to_fname2(fname1)
+
+
+def ALL_GSEA_OUTPUT(config):
+    """
+    ALL_GSEA_OUTPUT: smart to get all possible output files for GSEA
+    """
     L = []
     if config["GSEA_ANALYSIS"]:
-        gsea_dbs = []
-        for f in os.listdir(config['GSEA_DB_PATH']):
-            if f.endswith('.gmt'):
-                gsea_dbs.append(f)
-        gsea_dbs = [os.path.basename(x) for x in gsea_dbs]
-        if len(gsea_dbs) < 1:
+        gsea_dbs = config["GSEA_DB_NAMES"]
+        if len(config["GSEA_DB_NAMES"]) < 1:
             sys.exit("No gsea databases found in " + config['GSEA_DB_PATH'])
         if config["START"] in ["FASTQ", "BAM", "COUNT"]:
-            L = expand("gsea/{contrast}/{db}.GseaPreranked/index.html",contrast=CONTRASTS_DE,db=gsea_dbs)
+            L = expand("gsea/{contrast}/{db}.GseaPreranked/index.html",
+                contrast=DE_CONTRAST_NAMES,
+                db=config["GSEA_DB_NAMES"])
+        elif config["START"] == "RNK":
+            L = expand("gsea/{contrast}/{db}.GseaPreranked/index.html",
+                contrast=config["RNKS"],
+                db=config["GSEA_DB_NAMES"])
         else:
-            L = expand("gsea/{contrast}/{db}.GseaPreranked/index.html",contrast=config["RNKS"],db=gsea_dbs)
+            sys.exit("config['START'] not recognized")
     else:
-        L = ["Workflow_DAG.all.pdf"]
+        L = ["workflow_full_DAG.pdf"]
     return L
 
 
@@ -431,11 +582,13 @@ def GSEACOMPRESS_OUTPUT(config):
     L = []
     if config["GSEA_ANALYSIS"]:
         if config["START"] in ["FASTQ", "BAM", "COUNT"]:
-            L = expand("gsea/{contrast}.tar.gz",contrast=CONTRASTS_DE)
-        else:
+            L = expand("gsea/{contrast}.tar.gz",contrast=DE_CONTRAST_NAMES)
+        elif config["START"] == "RNK":
             L = expand("gsea/{contrast}.tar.gz",contrast=config["RNKS"])
+        else:
+            raise Exception("config['START'] not recognized")
     else:
-        L = ["Workflow_DAG.all.pdf"]
+        L = ["workflow_full_DAG.pdf"]
     return L
 
 
@@ -443,9 +596,9 @@ def GSEA_SINGLEBUBBLE_OUTPUT(config):
     L = []
     if config["GSEA_ANALYSIS"]:
         if config["START"] in ["FASTQ", "BAM", "COUNT"]:
-            L = expand("gsea/gsea_bubble/log/{contrast}.SingleBubblePlot.done",contrast=CONTRASTS_DE)
+            L = expand("gsea/gsea_bubble/log/{contrast}.SingleBubblePlot.done",contrast=DE_CONTRAST_NAMES)
         else:
             L = expand("gsea/gsea_bubble/log/{contrast}.SingleBubblePlot.done",contrast=config["RNKS"])
     else:
-        L = ["Workflow_DAG.all.pdf"]
+        L = ["workflow_full_DAG.pdf"]
     return L

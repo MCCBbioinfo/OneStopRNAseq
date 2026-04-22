@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Check log.snakefile.txt with ease.
 Usage:

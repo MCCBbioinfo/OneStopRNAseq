@@ -19,6 +19,9 @@ import subprocess
 from datetime import datetime
 from os.path import exists
 import pathlib
+import random
+import string
+import shutil
 
 srx = sys.argv[1]
 sampleName = sys.argv[2]
@@ -152,7 +155,7 @@ for srr in srrList:
     # jobCheckFile = fastq_folder + "/job_prefetch_" + srx + "_" + srr + ".txt"
     cmd_clearPrefetchLogFile  = "rm " + prefetchLogFile # Clear potential log file before submit new job
     cmd_clearPrefetchPrevious = "rm " + fastq_folder + "/" + srr + ".sra*" # get rid of srx.sra* files otherwise may prevent new prefetch from executing.
-    cmd = "bsub -q short -n 1 -W 4:00 -R rusage[mem=500] -o " + prefetchLogFile + " \"prefetch -f yes --max-size 200GB -o " + fastq_folder + "/" + srr + ".sra " + srr + "\""
+    cmd = "bsub -q short -n 1 -W 4:00 -R rusage[mem=500] -o " + prefetchLogFile + " \"ls /pi/hira.goel-umw/Kai && prefetch -f yes --max-size 200GB -o " + fastq_folder + "/" + srr + ".sra " + srr + "\""
     
     with open(logFile, "a") as f:
         now = datetime.now()
@@ -184,7 +187,8 @@ for srr in srrList:
                         now = datetime.now()
                         current_time = now.strftime("%H:%M:%S")
                         f.write(current_time + " prefetch " + prefetchLogFile + " complete.\n")
-                    # since we also check the res file, so the below check of the log file is redundant
+                    # since we also check the res file, so the below check of the log file is redundant 
+                    time.sleep(120)
                     for line in open(prefetchLogFile):
                         if "Successfully completed." in line:
                             with open(logFile, "a") as f:
@@ -198,6 +202,8 @@ for srr in srrList:
                             prefetchError = 0
                             break
                     if prefetchError == 1:
+                        random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                        shutil.copy(prefetchLogFile, prefetchLogFile + ".failed." + random_suffix)
                         with open(logFile, "a") as f:
                             now = datetime.now()
                             current_time = now.strftime("%H:%M:%S")
@@ -206,7 +212,7 @@ for srr in srrList:
                         break
 
         if prefetchLogComplete and not prefetchError:
-            time.sleep(10) # wait for 10 seconds for the .sra file to be ready.
+            time.sleep(60) # wait for 60 seconds for the .sra file to be ready.
             if not os.path.exists(prefetchSraFile):
                 prefetchError = 1
                 resubmit = resubmit + 1
@@ -240,11 +246,13 @@ for srr in srrList:
             with open(logFile, "a") as f:
                 now = datetime.now()
                 current_time = now.strftime("%H:%M:%S")
-                f.write(current_time + " prefetch job reach 9000-second limit, resubmit job to hpc.\n")
-                os.remove(prefetchLogFile)
-                subprocess.call(cmd, shell=True)
+                f.write(current_time + " prefetch job reach 3600-second limit, may need to resubmit job to hpc, but cowardly not to prevent duplicate job, wait for the prefetch short queue to time out ...\n")
+                # os.remove(prefetchLogFile)
+                # random_suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+                # os.rename(prefetchLogFile, prefetchLogFile + ".failed." + random_suffix) # add a random suffix
+                # subprocess.call(cmd, shell=True)
 
-        if timer > 27000:
+        if timer > 27000: # about 90min wall time
             with open(logFile, "a") as f:
                 now = datetime.now()
                 current_time = now.strftime("%H:%M:%S")
@@ -365,7 +373,7 @@ for srr in srrList:
             f.write(cmd_mv + "\n")
         subprocess.call(cmd_mv, shell = True)
 
-    cmd = "cd " + fastq_folder + " && bsub -q long -n 1 -W 40:00 -R rusage[mem=10000] -o " + fastq_folder + "/fastq_dump_" + srr + ".log.txt" + " parallel-fastq-dump -s " + srr + ".sra -t 1 -O ./ --tmpdir ./ --split-files --gzip"
+    cmd = "cd " + fastq_folder + " && bsub -q long -n 4 -W 40:00 -R rusage[mem=10000] -o " + fastq_folder + "/fastq_dump_" + srr + ".log.txt" + " parallel-fastq-dump -s " + srr + ".sra -t 4 -O ./ --tmpdir ./ --split-files --gzip"
 
     dumpLogFile = fastq_folder + "/fastq_dump_" + srr + ".log.txt"
     if os.path.exists(dumpLogFile):
@@ -416,7 +424,8 @@ for srr in srrList:
                             current_time = now.strftime("%H:%M:%S")
                             f.write(current_time + " " + srr + " dumped. Move on.\n")
         if resubmit:
-            os.remove(dumpLogFile)
+            # os.remove(dumpLogFile)
+            os.rename(dumpLogFile, dumpLogFile + ".failed")
             with open(logFile, "a") as f:
                 now = datetime.now()
                 current_time = now.strftime("%H:%M:%S")

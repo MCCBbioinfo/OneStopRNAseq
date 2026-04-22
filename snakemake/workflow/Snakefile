@@ -1,44 +1,20 @@
+"""
+Snakemake workflow for RNA-seq analysis
+Manual: https://github.com/radio1988/OneStopRNAseq/blob/master/snakemake/README.md
+"""
+
 import pandas as pd
 import sys, re, os, math
 from snakemake.utils import min_version
 
-# Manual: https://github.com/radio1988/OneStopRNAseq/blob/master/snakemake/README.md
 
 min_version("7.2")  # check snakemake version
 localrules: targets
 configfile: "config.yaml"
-include: 'rules/common.smk'
+include: 'rules/common.smk'  # common functions
 
-# CONFIG
-if config['START'] != 'RNK':
-    SAMPLES = read_table(config['META']).iloc[:, 0].tolist()
-else:
-    SAMPLES = ['placeholder']
-
-if config["START"] != 'RNK':
-    check_meta_data(config)
-
-config = uncompress_gzip_genome_files(config)  # genome, vcf, gtf
-check_config(config)  # check for incompatible config params
-if config['START'] == 'FASTQ' and 'MAX_FASTQ_SIZE' in config:  # skip check if config ignored this
-    check_fastq_size(config,SAMPLES)
-
-config['INDEX'] = config['GENOME'] + '.star_idx'
-MIN_GENE_COUNT = config['MIN_GENE_COUNT'] if 'MIN_GENE_COUNT' in config else 100  # DEXSeq
-
-# for DESeq2
-if config['DESEQ2_ANALYSIS'] and config['START'] in ["FASTQ", "BAM", "COUNT"]:
-    CONTRASTS_DE = get_contrast_fnames(config['CONTRAST_DE'])
-    CONTRASTS_DE = [x.replace("-",'.') for x in CONTRASTS_DE]
-else:
-    CONTRASTS_DE = ["placeholder"]
-
-# for DEXSeq
-if config['DEXSEQ_ANALYSIS'] and config["START"] in ["FASTQ", "BAM"]:
-    CONTRASTS_AS = get_contrast_fnames(config['CONTRAST_AS'])
-else:
-    CONTRASTS_AS = ["placeholder"]
-CONTRASTS_AS = [l.replace('.','_') for l in CONTRASTS_DE]
+# CONFIGURATION
+config, SAMPLES, DE_CONTRAST_NAMES, AS_CONTRAST_NAMES = check_and_update_config(config)
 
 # for rMATS
 if config['RMATS_ANALYSIS'] and config['START'] in ["FASTQ", "BAM"]:
@@ -67,16 +43,27 @@ else:
     ASCN = 0
 
 
+
 def target_input(config, ASCN):
     """
     - define target results to generate
     - check config logic error (in-compatibility)
     """
-    l = ["Workflow_DAG.all.pdf"]
+    l = ["workflow_full_DAG.pdf"]
 
     if config['START'] == 'FASTQ':
         l.append("fastqc/fastqc.zip")
         l.append("fastqc/CheckFile/all.txt")  # check fastq.gz size after trimming, if empty, abort
+
+        if config.get('SPECIES') in {'hg38', 'mm39'}:
+            l.extend(
+                expand(
+                    "Salmon_output/{sample}/quant.sf",
+                    sample=SAMPLES
+                )
+            )
+            l.append("Salmon_output/salmon.zip")
+
         if config['CleanUpRNAseqQC']:
             l.append("CleanUpRNAseqQC/Fig7.PCA.showing.sample.variability.pdf")  # QC
 
@@ -89,6 +76,9 @@ def target_input(config, ASCN):
             if config['START'] not in ['FASTQ']:
                 raise Exception('config Error: START and ASSEMBLY_ANALYSIS incompatible')
             l.append('stringtie/stringtie.merged.gtf')
+        
+        if config["TE_ANALYSIS"]:
+            l.append("SalmonTE_output/EXPR.csv")
 
     if config['START'] in ['FASTQ', 'BAM']:
         l.append('bam_qc/bam_qc.zip')
@@ -105,28 +95,29 @@ def target_input(config, ASCN):
                 for strand in config['STRAND']])
 
         if config['RMATS_ANALYSIS']:
-            l.extend(['rMATS.{ascn}/output/Results_JunctionCountsBased/RI.MATS.JC.sig.tsv'. \
-                          format(ascn=ascn) for ascn in range(1,1 + ASCN)])
+            l.extend(['rMATS.{ascn}/output/Results_JunctionCountsBased/RI.MATS.JC.sig.tsv'.format(ascn=ascn) \
+                      for ascn in range(1,1 + ASCN)])
 
         if config['DEXSEQ_ANALYSIS']:
             l.append(["DEXSeq/contrast{ascn}/contrast{ascn}.RData". \
                           format(ascn=ascn) for ascn in range(1,ASCN + 1)])
 
         if config['ASE_ANALYSIS']:
-            l.extend(["GATK_ASEReadCounter/{sample}.table". \
-                          format(sample=sample) for sample in SAMPLES])
+            l.extend(["GATK_ASEReadCounter/{sample}.table".format(sample=sample) for sample in SAMPLES])
 
     if config['START'] in ['FASTQ', 'BAM', 'COUNT']:
         if config['DESEQ2_ANALYSIS']:
             l.append("DESeq2/DESeq2.html")
 
     if config['GSEA_ANALYSIS']:
-        #l.extend(GSEA_OUTPUT(config))
+        #l.extend(ALL_GSEA_OUTPUT(config))
         l.extend(GSEACOMPRESS_OUTPUT(config))
-        l.extend(GSEA_SINGLEBUBBLE_OUTPUT(config))
+        # l.extend(GSEA_SINGLEBUBBLE_OUTPUT(config))
+        l.extend(["gsea/gsea_bubble/{db}.{topn}.pdf".format(db=db, topn=topn) \
+                  for db in config['GSEA_DB_NAMES'] for topn in config['GSEA_TOPNS']    ])
         l.append('gsea/gsea_bubble.tar.gz')
 
-    return (l)
+    return l
 
 
 rule targets:
@@ -138,7 +129,7 @@ rule targets:
         mem_mb=lambda wildcards, attempt: attempt * 1000
 
 
-# subworkflows
+# sub-workflows
 # popular
 include: 'rules/main.smk'
 include: 'rules/trim_qc.smk'
@@ -152,4 +143,3 @@ include: 'rules/dexseq.smk'  # low power, poor annotation
 # uncommon
 include: 'rules/assembly.smk'
 include: 'rules/ase.smk'  # ASE allele specific expression (quantification only)
-

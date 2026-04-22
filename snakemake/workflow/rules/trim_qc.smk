@@ -1,29 +1,64 @@
 import sys
 
-
 if config['PAIR_END']:
-    rule Trimmomatic_PE:
+    rule fastp_pe:
+        """
+        Trim paired-end reads using fastp
+        default min-len 15
+        -5, -3, window 4 , min 20Q, max 5N
+        adaptors will be trimmed
+        output is Phred33
+        """
         input:
-            r1="fastq/{sample,[A-Za-z0-9_-]+}.R1.fastq.gz",
-            r2="fastq/{sample,[A-Za-z0-9_-]+}.R2.fastq.gz"
+            r1="fastqc/reformatted/{sample,[A-Za-z0-9_-]+}.R1.fastq.gz",
+            r2="fastqc/reformatted/{sample,[A-Za-z0-9_-]+}.R2.fastq.gz",
+            r1_r2_check="fastqc/details_raw/{sample}.r1r2_checked"  # if r1 != r2, abort
         output:
             r1=temp("trimmed/{sample}.R1.fastq.gz"),
             r2=temp("trimmed/{sample}.R2.fastq.gz"),
             r1_unpaired=temp("trimmed/unpaired/{sample}.R1.fastq.gz"),
             r2_unpaired=temp("trimmed/unpaired/{sample}.R2.fastq.gz"),
+            html="trimmed/report/{sample}.html",
+            json="trimmed/report/{sample}.json"
+        conda:
+            "../envs/fastp.yaml"
         params:
-            trimmer=["ILLUMINACLIP:" + config[
-                'ADAPTORS'] + ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:16 TOPHRED33"],
+            extra="--adapter_fasta " + config['ADAPTORS'] # + " --detect_adapter_for_pe" gives err when no adaptors found
         resources:
-            mem_mb=lambda wildcards, attempt: attempt * 1000
+            mem_mb=lambda wildcards, attempt: attempt * 4000
         threads:
             4
         log:
             "trimmed/log/{sample}.trim.log"
         benchmark:
             "trimmed/log/{sample}.trim.log.benchmark"
-        wrapper:
-            "v3.13.1/bio/trimmomatic/pe"
+        shell:
+            "fastp -i {input.r1} -I {input.r2} -o {output.r1} -O {output.r2} \
+            --unpaired1 {output.r1_unpaired} --unpaired2 {output.r2_unpaired} \
+            -j {output.json} -h {output.html} -R {wildcards.sample} \
+            -w {threads} {params.extra} &> {log}"
+    # rule Trimmomatic_PE:
+    #         input:
+    #             r1="fastq/{sample,[A-Za-z0-9_-]+}.R1.fastq.gz",
+    #             r2="fastq/{sample,[A-Za-z0-9_-]+}.R2.fastq.gz"
+    #         output:
+    #             r1=temp("trimmed/{sample}.R1.fastq.gz"),
+    #             r2=temp("trimmed/{sample}.R2.fastq.gz"),
+    #             r1_unpaired=temp("trimmed/unpaired/{sample}.R1.fastq.gz"),
+    #             r2_unpaired=temp("trimmed/unpaired/{sample}.R2.fastq.gz"),
+    #         params:
+    #             trimmer=["ILLUMINACLIP:" + config[
+    #                 'ADAPTORS'] + ":2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:16 TOPHRED33"],
+    #         resources:
+    #             mem_mb=lambda wildcards, attempt: attempt * 1000
+    #         threads:
+    #             4
+    #         log:
+    #             "trimmed/log/{sample}.trim.log"
+    #         benchmark:
+    #             "trimmed/log/{sample}.trim.log.benchmark"
+    #         wrapper:
+    #             "v3.13.1/bio/trimmomatic/pe"
 else:
     rule fastp_se:
         input:
@@ -31,21 +66,25 @@ else:
         output:
             trimmed=temp("trimmed/{sample}.fastq.gz"),
             failed=temp("trimmed/failed/{sample}.fastq.gz"),
-            html="trimmed/{sample}.html",
-            json="trimmed/{sample}.json"
+            html="trimmed/report/{sample}.html",
+            json="trimmed/report/{sample}.json"
         log:
             "trimmed/log/{sample}.trim.log"
         benchmark:
             "trimmed/log/{sample}.trim.benchmark"
         params:
-            adapters="config['ADAPTORS']",
-            extra=""
+            extra="--adapter_fasta " + config['ADAPTORS'],
         resources:
-            mem_mb=lambda wildcards, attempt: attempt * 2000
+            mem_mb=lambda wildcards, attempt: attempt * 4000
         threads:
             4
-        wrapper:
-            "v4.7.2/bio/fastp"
+        conda:
+            "../envs/fastp.yaml"
+        shell:
+            "fastp -i {input.sample} -o {output.trimmed} \
+            --failed_out {output.failed} \
+            -j {output.json} -h {output.html} -R {wildcards.sample} \
+            -w {threads} {params.extra} &> {log}"
     # rule Trimmomatic_SE:
     #     input:
     #         "fastq/{sample,[A-Za-z0-9_-]+}.fastq.gz",
@@ -68,15 +107,31 @@ else:
 
 rule FastQC_Raw:
     input:
-        ["fastq/{sample}.R1.fastq.gz", "fastq/{sample}.R2.fastq.gz"] if config['PAIR_END'] \
-            else "fastq/{sample}.fastq.gz"
+        lambda wildcards: [
+            f"fastq/{wildcards.sample}.R1.fastq.gz",
+            f"fastq/{wildcards.sample}.R2.fastq.gz"
+        ] if config['PAIR_END'] else f"fastq/{wildcards.sample}.fastq.gz"
     output:
-        ["fastqc/details_raw/{sample}.R1_fastqc.html", "fastqc/details_raw/{sample}.R2_fastqc.html"] \
+        ["fastqc/details_raw/{sample}.R1_fastqc.html", "fastqc/details_raw/{sample}.R2_fastqc.html", temp("fastqc/reformatted/{sample}.R1.fastq.gz"), temp("fastqc/reformatted/{sample}.R2.fastq.gz")] \
             if config['PAIR_END'] else \
-            "fastqc/details_raw/{sample}_fastqc.html",
+            ["fastqc/details_raw/{sample}_fastqc.html", temp("fastqc/reformatted/{sample}.fastq.gz")],
         ["fastqc/details_raw/{sample}.R1_fastqc.zip", "fastqc/details_raw/{sample}.R2_fastqc.zip"] \
             if config['PAIR_END'] else \
             "fastqc/details_raw/{sample}_fastqc.zip"
+    params:
+        reformat_cmd = lambda wildcards: (
+            f"reformat.sh overwrite=t tossbrokenreads=t tossjunk=t in=fastq/{wildcards.sample}.R1.fastq.gz out=fastqc/reformatted/{wildcards.sample}.R1.tmp.fastq.gz 2> fastqc/details_raw/bbmap/reformat_R1_{wildcards.sample}.txt || true\n"
+            f"reformat.sh overwrite=t tossbrokenreads=t tossjunk=t in=fastq/{wildcards.sample}.R2.fastq.gz out=fastqc/reformatted/{wildcards.sample}.R2.tmp.fastq.gz 2> fastqc/details_raw/bbmap/reformat_R2_{wildcards.sample}.txt || true\n"
+            f"\trepair.sh overwrite=t tossbrokenreads=t tossjunk=t in=fastqc/reformatted/{wildcards.sample}.R1.tmp.fastq.gz in2=fastqc/reformatted/{wildcards.sample}.R2.tmp.fastq.gz out=fastqc/reformatted/{wildcards.sample}.R1.fastq.gz out2=fastqc/reformatted/{wildcards.sample}.R2.fastq.gz 2> fastqc/details_raw/bbmap/repair_{wildcards.sample}.txt || true\n"
+            f"\trm fastqc/reformatted/{wildcards.sample}.R1.tmp.fastq.gz fastqc/reformatted/{wildcards.sample}.R2.tmp.fastq.gz"
+            if config["PAIR_END"]
+            else f"reformat.sh tossbrokenreads=t tossjunk=t overwrite=t in=fastq/{wildcards.sample}.fastq.gz out=fastqc/reformatted/{wildcards.sample}.fastq.gz 2> fastqc/details_raw/bbmap/reformat_{wildcards.sample}.txt || true"
+        ),
+        fastqc_input = lambda wildcards: (
+            f"fastqc/reformatted/{wildcards.sample}.R1.fastq.gz fastqc/reformatted/{wildcards.sample}.R2.fastq.gz"
+            if config["PAIR_END"]
+            else f"fastqc/reformatted/{wildcards.sample}.fastq.gz"
+        )
     conda:
         "../envs/fastqc.yaml"
     resources:
@@ -88,7 +143,31 @@ rule FastQC_Raw:
     benchmark:
         "fastqc/details_raw/log/{sample}.benchmark"
     shell:
-        "fastqc -t {threads} {input} -o fastqc/details_raw &> {log};"
+        """
+        mkdir -p fastqc/reformatted fastqc/details_raw/bbmap
+
+        {params.reformat_cmd} &>> {log}
+
+        fastqc -t {threads} {params.fastqc_input} -o fastqc/details_raw &>> {log}
+        """
+
+
+if config['PAIR_END']:
+    localrules: Check_R1_R2
+    rule Check_R1_R2:
+        input:
+            r1="fastqc/details_raw/{sample}.R1_fastqc.zip",
+            r2="fastqc/details_raw/{sample}.R2_fastqc.zip"
+        output:
+            "fastqc/details_raw/{sample}.r1r2_checked",
+        resources:
+            mem_mb=lambda wildcards, attempt: attempt * 1000
+        threads:
+            1
+        log:
+            "fastqc/details_raw/{sample}.r1r2_checked.log",
+        shell:
+            "python workflow/script/check_r1_r2.py {input.r1} {input.r2} &> {log} || true && touch {output}"
 
 
 rule MultiQC_Raw:
@@ -184,14 +263,14 @@ def CheckTrimmedFiles_Input(config, SAMPLES):
         L.extend(["trimmed/{}.R2.fastq.gz".format(sample) for sample in SAMPLES])
     else:
         L = ["trimmed/{}.fastq.gz".format(sample) for sample in SAMPLES]
-    return (L)
+    return L
 
 
 # CHECK FILES
 rule CheckTrimmedReadFiles:
     """check trimmed.fastq.gz for all samples, pass if all non empty (>100bytes)"""
     input:
-        CheckTrimmedFiles_Input(config,SAMPLES)
+        CheckTrimmedFiles_Input(config, SAMPLES)
     output:
         'fastqc/CheckFile/all.txt'
     log:

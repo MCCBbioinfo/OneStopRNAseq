@@ -2,6 +2,7 @@
 Gene Expression Quantification:
 - featureCounts
 - SalmonTE
+- Salmon
 """
 
 
@@ -42,6 +43,7 @@ rule featureCounts_EXON:
         {params.pe}  {params.mode} \
         {input.bams} > {log} 2>&1
         """
+        
 
 rule featureCounts_EXON_multiqc:
     input:
@@ -192,29 +194,88 @@ rule SalmonTE:
             expand("trimmed/{sample}.fastq.gz",sample=SAMPLES),
         raw_reads2=expand("trimmed/{sample}.R2.fastq.gz",sample=SAMPLES) \
             if config['PAIR_END'] else \
-            expand("trimmed/{sample}.fastq.gz",sample=SAMPLES)
+            expand("trimmed/{sample}.fastq.gz",sample=SAMPLES),
+        meta="meta/meta.csv",
+        contrast="meta/contrast.de.csv"
     output:
         "SalmonTE_output/EXPR.csv"
     conda:
-        "../envs/salmonte.yaml"  # test
+        "../envs/deseq2_salmonte.yaml"
     resources:
         mem_mb=lambda wildcards, attempt: attempt * 1000,
     params:
         ref=config['TE_REFERENCE'],
+        fdr=config['MAX_FDR'],
+        lfc=config['MIN_LFC'],
+        independentFilter=config["independentFilter"],
+        cooksCutoff=config["cooksCutoff"],
+        blackSamples=config['blackSamples'] if 'blackSamples' in config else "",
+        anno_tab=config['ANNO_TAB']
     threads:
         16
     log:
-        "log/SalmonTE.log"
+        "log/SalmonTE_output/SalmonTE.log"
     benchmark:
-        "log/SalmonTE.benchmark"
+        "log/SalmonTE_output/SalmonTE.benchmark"
     shell:
         """
         rm -rf SalmonTE_output/
         python workflow/envs/SalmonTE/SalmonTE.py --version >> {log}
-        python workflow/envs/SalmonTE/SalmonTE.py quant \
-        --reference={params.ref} --exprtype=count \
-        --num_threads={threads} \
-        {input.reads} > {log} 2>&1
+
+        # if custom repeat library is provided, use it
+        if [ -f custom_repeat_lib.fa ]; then
+            python workflow/envs/SalmonTE/SalmonTE.py index \
+                --ref_name=custom \
+                --input_fasta=custom_repeat_lib.fa > {log} 2>&1
+            python workflow/envs/SalmonTE/SalmonTE.py quant \
+                --reference=custom --exprtype=count \
+                --num_threads={threads} \
+                {input.reads} > {log} 2>&1
+        else
+            # if custom repeat library is not provided, use default
+            python workflow/envs/SalmonTE/SalmonTE.py quant \
+                --reference={params.ref} --exprtype=count \
+                --num_threads={threads} \
+                {input.reads} > {log} 2>&1
+        fi
+
+        # Perform statistical test using SalmonTE built-in test, this does not perform batch correction
+        num_cols=$(awk -F, 'NR==1 {{print NF}}' {input.contrast})
+        mv SalmonTE_output/condition.csv SalmonTE_output/original_condition.csv
+        mv SalmonTE_output/EXPR.csv SalmonTE_output/original_EXPR.csv
+
+        for ((i=1; i<=${{num_cols}}; i++)); do
+            python workflow/envs/SalmonTE/scripts/prepare_condition.py \
+                {input.meta} \
+                {input.contrast} \
+                ${{i}} \
+                SalmonTE_output/original_condition.csv \
+                SalmonTE_output/original_EXPR.csv \
+                SalmonTE_output/condition.csv \
+                SalmonTE_output/EXPR.csv
+
+            python workflow/envs/SalmonTE/SalmonTE.py test --inpath=SalmonTE_output --outpath=SalmonTE_output/DET_contrast_${{i}} --conditions=control,treatment
+            mv SalmonTE_output/condition.csv SalmonTE_output/DET_contrast_${{i}}
+            mv SalmonTE_output/EXPR.csv SalmonTE_output/DET_contrast_${{i}}
+        done
+
+        mv SalmonTE_output/original_condition.csv SalmonTE_output/condition.csv
+        mv SalmonTE_output/original_EXPR.csv SalmonTE_output/EXPR.csv
+
+        # Perform statistical test using DESeq2, this performs batch correction
+        ## Note that it is best to merge TE with genes when using DESeq2 so it can model a more stable dispersion in case the TE composition varies across samples
+        mkdir SalmonTE_output/DET_batch_corrected
+        Rscript workflow/envs/SalmonTE/scripts/DESeq2.R \
+            {input.meta} \
+            {input.contrast} \
+            SalmonTE_output/EXPR.csv \
+            SalmonTE_output/DET_batch_corrected \
+            {params.fdr} \
+            {params.lfc} \
+            {params.independentFilter} \
+            {params.cooksCutoff} \
+            {params.blackSamples} \
+            {params.anno_tab} > SalmonTE_output/DET_batch_corrected/DESeq2_log.txt 2>&1
         """
 
 rule Merge_TE_and_GE:
@@ -241,4 +302,65 @@ rule Merge_TE_and_GE:
         """
         python workflow/script/merge_featureCount_and_SalmonTE.py \
         {input.gene} {input.te} {output} > {log} 2>&1;
+        """
+
+# Below are added by Kai
+# I would like to add a rule that quantify the reads using Salmon if the genome is human or mouse
+rule salmon:
+    input:
+        reads=["trimmed/{sample}.R1.fastq.gz", "trimmed/{sample}.R2.fastq.gz"] \
+            if config["PAIR_END"] else \
+            "trimmed/{sample}.fastq.gz"
+    output:
+        quant="Salmon_output/{sample}/quant.sf"
+    params:
+        salmon_index = lambda wildcards: config["SALMON_INDEX"],
+        libtype = "A",
+        outdir = lambda wildcards, output: "Salmon_output/{sample}".format(
+            sample=wildcards.sample,
+        ),
+        input_args = lambda wildcards, input: (
+            f"-1 {input.reads[0]} -2 {input.reads[1]}" if config["PAIR_END"] 
+            else f"-r {input.reads}"
+        )
+    conda:
+        "../envs/salmon.yaml"
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt * 16000,
+    threads:
+        4
+    log:
+        "Salmon_output/{sample}/log/quant.log"
+    benchmark:
+        "Salmon_output/{sample}/log/quant.benchmark"
+    shell:
+        """
+        salmon quant \
+            -i {params.salmon_index} \
+            -l {params.libtype} \
+            {params.input_args} \
+            --validateMappings \
+            -p {threads} \
+            -o {params.outdir} \
+            > {log} 2>&1
+        """
+
+rule salmon_zip:
+    input:
+        expand(
+            "Salmon_output/{sample}/quant.sf",
+            sample=SAMPLES
+        )
+    output:
+        "Salmon_output/salmon.zip"
+    threads:
+        1
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt * 1000,
+    log:
+        "Salmon_output/salmon.zip.log"
+    shell:
+        """
+        rm -f {output} && \
+        zip -rq {output} Salmon_output -x {output} >> {log} 2>&1
         """

@@ -1,7 +1,4 @@
-def checkFileInput(wildcards):
-    check = "fastqc/CheckFile/CheckFile.{sample}.txt" if config['START'] == 'FASTQ' else 'Workflow_DAG.all.pdf'
-    return check
-
+localrules: Create_DAG, reset
 
 rule DESeq2:
     input:
@@ -10,9 +7,9 @@ rule DESeq2:
         contrast=config["CONTRAST_DE"],
     output:
         "DESeq2/DESeq2.html",
-        expand("DESeq2/rnk/{contrast}.rnk",contrast=CONTRASTS_DE)
+        expand("DESeq2/rnk/{contrast}.rnk",contrast=DE_CONTRAST_NAMES)
     conda:
-        "../envs/deseq2.yaml"
+        "../envs/deseq2_salmonte.yaml"
     resources:
         mem_mb=lambda wildcards, attempt: attempt * 4000,
     params:
@@ -60,29 +57,34 @@ rule Create_DAG:
     threads:
         1
     output:
-        "Workflow_DAG.all.pdf",
+        "workflow_full_DAG.pdf",
         "rulegraph.pdf"
     log:
-        "Workflow_DAG.all.pdf.log"
+        "workflow_full_DAG.pdf.log"
     shell:
         "snakemake --dag targets > dag 2> {log};"
-        "cat dag|dot -Tpdf > Workflow_DAG.all.pdf 2>> {log};"
+        "cat dag|dot -Tpdf > workflow_full_DAG.pdf 2>> {log};"
         "snakemake  --rulegraph targets > rulegraph; cat rulegraph| dot -Tpdf > rulegraph.pdf 2>> {log}"
 
 
 rule reset:
-    shell:
-        """
-        echo 'deleting files..'
-        rm -rf lsf.log  meta/log/ gsea_bubble/ log/ workflow.log fastqc/ bam_qc/ trimmed/ mapped_reads/ sorted_reads/ bam_qc/ bigWig/ \
-        feature_count/ fastq_salmon SalmonTE_output/ DESeq2/ salmon/ gsea/ gsea_compressed/ \
-        GATK_ASEReadCounter/ DEXSeq_count/  DEXSeq/ rMATS.*/ CleanUpRNAseqQC/ CleanUpRNAseqDE/ \
-        _STARgenome _STARtmp \
-        feature_count_gene_level hisat2 stringtie \
-        lsf.log Log.out nohup.out report.log report.html  dag Workflow_DAG.all.pdf \
-        rulegraph  rulegraph.pdf report.log workflow.log log/ \
-        meta/strandness.detected.txt  meta/decoder.txt meta/read_length.median.txt \
-        meta/read_length.max.txt Workflow_DAG.all.pdf.log
-        echo 'unlocking dir..'
-        snakemake -j 1 --unlock
-        """
+    run:
+        shell(f"""
+                echo 'deleting result and logs..'
+                rm -rf lsf.log log/ meta/configCheck.log meta/configCheck.txt meta/log/ workflow.log 
+                rm -rf dag rulegraph rulegraph.pdf workflow_full_DAG.pdf workflow_full_DAG.pdf.log
+                rm -rf feature_count/ DESeq2/ gsea/ feature_count_gene_level/
+                rm -rf trimmed/ fastqc/ mapped_reads/ sorted_reads/ bigWig/ bam_qc/
+                rm -rf CleanUpRNAseqQC/ CleanUpRNAseqDE/
+                rm -rf fastq_salmon/   SalmonTE_output/
+                rm -rf salmon/ DEXSeq_count/  DEXSeq/ rMATS.*/
+                rm -rf GATK_ASEReadCounter/   
+                rm -rf _STARgenome _STARtmp 
+                rm -rf hisat2 stringtie 
+                rm -rf report.log report.html
+                rm -f meta/strandness.detected.txt  meta/decoder.txt meta/read_length.median.txt 
+                rm -f meta/read_length.max.txt
+                        
+                echo 'unlocking dir..'
+                snakemake -j 1 --unlock
+        """)

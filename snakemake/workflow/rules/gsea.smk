@@ -2,6 +2,8 @@
 GSEA
 GSEA_Bubble
 """
+import pandas as pd
+import os
 
 
 rule GSEA:
@@ -11,13 +13,18 @@ rule GSEA:
     """
     input:
         rnk=lambda wildcards: input_rnk_fname1(wildcards,config),
-        db=lambda wildcards: os.path.join(config['GSEA_DB_PATH'],wildcards["db"])
+        db=lambda wildcards: os.path.join(config['GSEA_DB_PATH'],wildcards["db"]),
+        rnk_to_upper = "workflow/script/rnk_to_upper.py", # fix the shadow side effect
+        gmt_to_upper = "workflow/script/gmt_to_upper.py",
+        gsea_bubble = "workflow/script/gsea_bubble.py"
     output:
-        "gsea/{fname}/{db}.GseaPreranked/index.html"
+        html="gsea/{fname}/{db}.GseaPreranked/index.html",
+        edb="gsea/{fname}/{db}.GseaPreranked/edb/results.edb"
+    # shadow: "minimal" # did not solve the racing issue
     conda:
         "../envs/java11.yaml"  # test
     resources:
-        mem_mb=lambda wildcards, attempt: attempt * 8100
+        mem_mb=lambda wildcards, attempt: attempt * 16000
     params:
         svg=config["GSEA_PLOT_SVG"],
         nplot=config["GSEA_NPLOTS"],
@@ -43,50 +50,57 @@ rule GSEA:
         rm -rf gsea/{wildcards.fname}/{wildcards.db}.GseaPreranked/  # avoid dir structure mistake
         rm -rf gsea/{wildcards.fname}/error_{wildcards.db}*GseaPreranked*/  # avoid confusion of temp files in multiple run attempts
 
-        python workflow/script/rnk_to_upper.py {input.rnk} >> {log} 2>&1;  # fix gene symbol error; standardize file format (xlsx, rnk, etc)
-        python workflow/script/gmt_to_upper.py -f {input.db} 1> {params.gmt_fmted} 2> {log}  # gene symbols to upper
+        python {input.rnk_to_upper} {input.rnk} >> {log} 2>&1;  # fix gene symbol error; standardize file format (xlsx, rnk, etc)
+        python {input.gmt_to_upper} -f {input.db} 1> {params.gmt_fmted} 2> {log}  # gene symbols to upper
         
-        if workflow/envs/GSEA_4.3.2/gsea-cli.sh GSEAPreranked \
-        -gmx {params.gmt_fmted} -rnk {params.rnk_flat_file} -rpt_label {wildcards.db} \
+        # Pre-filter out non-numeric rows
+        awk '($2 == $2+0)' {params.rnk_flat_file} > {wildcards.fname}.filtered.rnk
+
+        workflow/envs/GSEA_4.3.2/gsea-cli.sh GSEAPreranked \
+        -gmx {params.gmt_fmted} -rnk {wildcards.fname}.filtered.rnk -rpt_label {wildcards.db} \
         -norm meandiv -nperm 1000  -scoring_scheme classic \
         -create_svgs {params.svg} -make_sets true  -rnd_seed timestamp -zip_report false \
-        -set_max 15000 -set_min 15 \
-        -plot_top_x {params.nplot} -out ./gsea/{wildcards.fname} >> {log} 2>&1;
-        then
-            mv gsea/{wildcards.fname}/{wildcards.db}.GseaPreranked.*/ \
+        -set_max 15000 -set_min 0 \
+        -plot_top_x {params.nplot} -out ./gsea/{wildcards.fname} >> {log} 2>&1
+        
+        exit_code=$?  # exit code of last command
+        
+        if [ $exit_code -ne 0 ]; then
+            #e.g. error_m2.cp.wikipathways.v2024.1.Mm.symbols.gmt.GseaPreranked.1739546734303
+            mv gsea/{wildcards.fname}/error*{wildcards.db}.GseaPreranked.*/ \
             gsea/{wildcards.fname}/{wildcards.db}.GseaPreranked/  >> {log} 2>&1;
         else
-            mv gsea/{wildcards.fname}/*{wildcards.db}.GseaPreranked*/ \
+            mv gsea/{wildcards.fname}/{wildcards.db}.GseaPreranked*/ \
             gsea/{wildcards.fname}/{wildcards.db}.GseaPreranked/  >> {log} 2>&1;
         fi
     
         cp workflow/envs/GSEA_ReadMe.html gsea/ >> {log} 2>&1;
-
-        # # compress
-        # cd gsea/{wildcards.fname}/
-        # rm -f {wildcards.db}.GseaPreranked.zip
-        # zip -rq {wildcards.db}.GseaPreranked.zip {wildcards.db}.GseaPreranked/ >> {log} 2>&1
         """
 
-rule GSEA_compression:
+rule Compress_GSEA_Output:
     input:
-        GSEA_OUTPUT(config)
+        ALL_GSEA_OUTPUT(config)  # todo: even some failed, still compress the successful ones
     output:
         "gsea/{contrast}.tar.gz"
     resources:
         mem_mb=1000
     threads:
         4
+    benchmark:
+        "gsea/log/{contrast}.tar.gz.benchmark"
     shell:
-        "tar cf - gsea/{wildcards.contrast} | pigz -p {threads} > {output} "
+        "tar cf - -C gsea {wildcards.contrast} | pigz -p {threads} > {output} "
 
-rule GSEA_SingleBubblePlot:
+rule SingleBubblePlot:
+    """
+    old R version, should update or delete
+    """
     input:
         "gsea/{contrast}.tar.gz"
     output:
         touch('gsea/gsea_bubble/log/{contrast}.SingleBubblePlot.done')
     conda:
-        "../envs/deseq2.yaml"
+        "../envs/deseq2_salmonte.yaml"
     resources:
         mem_mb=lambda wildcards, attempt: attempt * 4000
     log:
@@ -98,39 +112,51 @@ rule GSEA_SingleBubblePlot:
     shell:
         "Rscript workflow/script/gsea_bubble.R {input} {wildcards.contrast} &> {log}"
 
+
 if config["GSEA_ANALYSIS"]:
     if config["START"] in ["FASTQ", "BAM", "COUNT"]:
-        GSEA_compression_OUTPUT = expand("gsea/{contrast}.tar.gz",contrast=CONTRASTS_DE)
+        GSEA_MultiBubblePlot_Input = lambda wildcards: expand(
+            "gsea/{fname}/{db}.GseaPreranked/edb/results.edb",
+            fname=DE_CONTRAST_NAMES,
+            db=[wildcards.db]  # Use the single {db} wildcard
+        )
     else:
-        GSEA_compression_OUTPUT = expand("gsea/{contrast}.tar.gz",contrast=config["RNKS"])
+        GSEA_MultiBubblePlot_Input = lambda wildcards: expand(
+            "gsea/{fname}/{db}.GseaPreranked/edb/results.edb",
+            fname=config["RNKS"],
+            db=[wildcards.db]  # Use the single {db} wildcard
+        )
 
-    rule GSEA_MultiBubblePlot:
+    rule MultiBubblePlot:
         input:
-            GSEA_compression_OUTPUT
+            GSEA_MultiBubblePlot_Input
         output:
-            touch('gsea/gsea_bubble/log/MultiBubblePlot.done')
-        conda:
-            "../envs/deseq2.yaml"
-        resources:
-            mem_mb=lambda wildcards, attempt: attempt * 4000
-        priority: 100
+            'gsea/gsea_bubble/{db}.{topn}.pdf'
         log:
-            'gsea/gsea_bubble/log/MultiBubblePlot.log'
+            'gsea/gsea_bubble/log/{db}.{topn}.pdf.log'
+        benchmark:
+            'gsea/gsea_bubble/log/{db}.{topn}.pdf.benchmark'
+        resources:
+            mem_mb=lambda wildcards, attempt: attempt * 1500
         threads:
             1
-        benchmark:
-            'gsea/gsea_bubble/log/MultiBubblePlot.benchmark'
+        priority: 100
         shell:
-            "Rscript workflow/script/gsea_bubble.R {input} MultiBubblePlot &> {log}"
+            "python workflow/script/gsea_bubble.py -edbs {input} -output {output} -alpha 0.05 -topn {wildcards.topn} &> {log}"
 
-    rule GSEA_Bubble_Compression:
+    rule Compress_BubblePlots:
         input:
-            'gsea/gsea_bubble/log/MultiBubblePlot.done'
+            expand('gsea/gsea_bubble/{db}.{topn}.pdf', db=config["GSEA_DB_NAMES"], topn=config["GSEA_TOPNS"])
         output:
-            'gsea/gsea_bubble.tar.gz'
+            "gsea/gsea_bubble.tar.gz"
+        log:
+            "gsea/gsea_bubble/log/gsea_bubble.tar.gz.log"
+        benchmark:
+            "gsea/gsea_bubble/log/gsea_bubble.tar.gz.benchmark"
         resources:
-            mem_mb=1000
+            mem_mb=4000
         threads:
-            4
+            2
         shell:
-            "tar cf - gsea/gsea_bubble | pigz -p {threads} > {output} "
+            # "tar czf -C gsea gsea_bubble {output} 2> {log}"
+            "tar cf - -C gsea gsea_bubble | pigz -p {threads} > {output}"

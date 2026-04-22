@@ -2,7 +2,6 @@ import sys
 import pandas as pd
 import re
 
-
 def get_STRAND(strand_string):
     print(strand_string)
     p0 = re.compile("counts.s0\.[liberal|strict]")
@@ -18,7 +17,6 @@ def get_STRAND(strand_string):
         sys.exit("strand_string not recognized")
     return STRAND
 
-
 log = open(snakemake.log[0], "w")
 sys.stderr = log
 sys.stdout = log
@@ -32,11 +30,12 @@ STRAND = get_STRAND(strand_string)
 # output
 fname = snakemake.input[0]  # config['META']
 if fname.endswith('csv'):
-    df = pd.read_csv(fname)
+    df = pd.read_csv(fname, keep_default_na=False, na_values=[])
 elif fname.endswith('xlsx'):
-    df = pd.read_excel(fname)
+    df = pd.read_excel(fname, keep_default_na=False, na_values=[])
 elif fname.endswith('txt'):
-    df = pd.read_table(fname)
+    df = pd.read_table(fname, keep_default_na=False, na_values=[])
+df = df.replace("NA", "NA_")
 
 df.columns = ['sample_name', 'group', 'batch']
 df['BAM_file'] = 'mapped_reads/' + df['sample_name'] + '.bam'
