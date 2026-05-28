@@ -536,6 +536,7 @@ if (sum(anno[, 1] %in% row.names(cts)) >= 1) {
   print(anno[1:2, 1:2])
 }
 
+cts[is.na(cts)] <- 0
 count <- data.frame(cts)
 colnames(count) <- paste(colnames(count),"COUNT", sep = ":")
 count_out <- merge(anno, count, by.x=1, by.y=0, all.y=T, sort=F)
