@@ -458,7 +458,13 @@ if (sum(duplicated(df$GENE_ID)) > 0) {
   df$GENE_ID <- make.unique(df$GENE_ID)
 }
 
-df = column_to_rownames(df, var =  colnames(df)[1]) 
+df <- df %>%
+  # Handle explicit NAs in id_col that cause column_to_rownames failure
+  filter(!is.na(.data[[id_col]])) %>%
+  filter(.data[[id_col]] != "", .data[[id_col]] != " ") %>%
+  distinct(.data[[id_col]], .keep_all = TRUE) %>%
+  column_to_rownames(var = id_col)
+# df = column_to_rownames(df, var =  colnames(df)[1]) 
 
 # auto-detect content format
 featureCountsFormat <- F
