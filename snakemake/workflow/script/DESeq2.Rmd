@@ -458,6 +458,7 @@ if (sum(duplicated(df$GENE_ID)) > 0) {
   df$GENE_ID <- make.unique(df$GENE_ID)
 }
 
+id_col <- colnames(df)[1]
 df <- df %>%
   # Handle explicit NAs in id_col that cause column_to_rownames failure
   filter(!is.na(.data[[id_col]])) %>%
