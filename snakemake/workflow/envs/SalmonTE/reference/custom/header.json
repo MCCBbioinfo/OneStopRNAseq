@@ -1,0 +1,12 @@
+{
+    "value0": {
+        "IndexType": 1,
+        "IndexVersion": "q5",
+        "UsesKmers": true,
+        "KmerLen": 31,
+        "BigSA": false,
+        "PerfectHash": false,
+        "SeqHash": "d1df3fe8ad10bf9a6dd6253fe06fea6b589f6dfc5213bdf0a81e75814a7c5508",
+        "NameHash": "f086daba0ca9732ba3f4abc0fc5a96c112103d4cab502ac88e323a029578605b"
+    }
+}

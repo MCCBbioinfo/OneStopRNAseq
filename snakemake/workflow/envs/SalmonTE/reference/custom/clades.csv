@@ -1,0 +1,550 @@
+name,class,clade
+AluYa5,SINE,Non-LTR Retrotransposon
+AluYb10,SINE,Non-LTR Retrotransposon
+AluYb11,SINE,Non-LTR Retrotransposon
+AluYb8,SINE,Non-LTR Retrotransposon
+AluYb8a1,SINE,Non-LTR Retrotransposon
+AluYb9,SINE,Non-LTR Retrotransposon
+AluYk13,SINE,Non-LTR Retrotransposon
+AmnSINE1_HS,SINE,Non-LTR Retrotransposon
+CHARLIE10,hAT,DNA transposon
+CHARLIE2A,hAT,DNA transposon
+CHARLIE2B,hAT,DNA transposon
+CHARLIE3,hAT,DNA transposon
+CHARLIE5,hAT,DNA transposon
+CHARLIE6,hAT,DNA transposon
+CHARLIE7,hAT,DNA transposon
+CHARLIE8,hAT,DNA transposon
+CHARLIE9,hAT,DNA transposon
+CHESHIRE,hAT,DNA transposon
+CHESHIRE_A,hAT,DNA transposon
+CHESHIRE_B,hAT,DNA transposon
+CR1_HS,CR1,Non-LTR Retrotransposon
+ERV3-16A3_I,ERV3,Endogenous Retrovirus
+ERV3-16A3_LTR,ERV3,Endogenous Retrovirus
+ERVL,ERV3,Endogenous Retrovirus
+FORDPREFECT,hAT,DNA transposon
+FORDPREFECT_A,hAT,DNA transposon
+GOLEM_A,Mariner/Tc1,DNA transposon
+GOLEM_C,Mariner/Tc1,DNA transposon
+HAL1B,L1,Non-LTR Retrotransposon
+HARLEQUIN,ERV1,Endogenous Retrovirus
+HARLEQUINLTR,ERV1,Endogenous Retrovirus
+HERV-K14CI,ERV2,Endogenous Retrovirus
+HERV-K14I,ERV2,Endogenous Retrovirus
+HERV15I,other,other
+HERV16,ERV3,Endogenous Retrovirus
+HERV17,ERV1,Endogenous Retrovirus
+HERV18,other,other
+HERV19I,ERV1,Endogenous Retrovirus
+HERV1_LTR,other,other
+HERV23,other,other
+HERV3,ERV1,Endogenous Retrovirus
+HERV30I,other,other
+HERV35I,ERV1,Endogenous Retrovirus
+HERV38I,other,other
+HERV39,other,other
+HERV46I,other,other
+HERV49I,ERV1,Endogenous Retrovirus
+HERV4_I,ERV1,Endogenous Retrovirus
+HERV4_LTR,other,other
+HERV52I,other,other
+HERV57I,other,other
+HERV9,ERV1,Endogenous Retrovirus
+HERVE,ERV1,Endogenous Retrovirus
+HERVFH19I,other,other
+HERVG25,other,other
+HERVH48I,other,other
+HERVI,ERV1,Endogenous Retrovirus
+HERVIP10F,ERV1,Endogenous Retrovirus
+HERVIP10FH,ERV1,Endogenous Retrovirus
+HERVK11DI,ERV2,Endogenous Retrovirus
+HERVK11I,ERV2,Endogenous Retrovirus
+HERVK13I,ERV2,Endogenous Retrovirus
+HERVK3I,ERV2,Endogenous Retrovirus
+HERVK9I,ERV2,Endogenous Retrovirus
+HERVL,ERV3,Endogenous Retrovirus
+HERVL74,ERV3,Endogenous Retrovirus
+HERVL_40,other,other
+HERVP71A_I,other,other
+HSMAR1,Mariner/Tc1,DNA transposon
+HSMAR2,Mariner/Tc1,DNA transposon
+HSTC2,Mariner/Tc1,DNA transposon
+HUERS-P2,other,other
+HUERS-P3,ERV1,Endogenous Retrovirus
+HUERS-P3B,ERV1,Endogenous Retrovirus
+IN25,L1,Non-LTR Retrotransposon
+KANGA2_A,Mariner/Tc1,DNA transposon
+L1,L1,Non-LTR Retrotransposon
+L1HS,L1,Non-LTR Retrotransposon
+L1M1B_5,L1,Non-LTR Retrotransposon
+L1M2A1_5,L1,Non-LTR Retrotransposon
+L1M2A_5,L1,Non-LTR Retrotransposon
+L1M2B_5,L1,Non-LTR Retrotransposon
+L1M2C_5,L1,Non-LTR Retrotransposon
+L1M2_5,L1,Non-LTR Retrotransposon
+L1M3B_5,L1,Non-LTR Retrotransposon
+L1M3C_5,L1,Non-LTR Retrotransposon
+L1M4B,L1,Non-LTR Retrotransposon
+L1M6B_5end,L1,Non-LTR Retrotransposon
+L1MA1,L1,Non-LTR Retrotransposon
+L1MA2,L1,Non-LTR Retrotransposon
+L1MA3,L1,Non-LTR Retrotransposon
+L1MA4,L1,Non-LTR Retrotransposon
+L1MA4A,L1,Non-LTR Retrotransposon
+L1MA5,L1,Non-LTR Retrotransposon
+L1MA5A,L1,Non-LTR Retrotransposon
+L1MA6,L1,Non-LTR Retrotransposon
+L1MA7,L1,Non-LTR Retrotransposon
+L1MA8,L1,Non-LTR Retrotransposon
+L1MA9,L1,Non-LTR Retrotransposon
+L1MB1,L1,Non-LTR Retrotransposon
+L1MB2,L1,Non-LTR Retrotransposon
+L1MB3,L1,Non-LTR Retrotransposon
+L1MB3_5,L1,Non-LTR Retrotransposon
+L1MB4,L1,Non-LTR Retrotransposon
+L1MB5,L1,Non-LTR Retrotransposon
+L1MB8,L1,Non-LTR Retrotransposon
+L1MC1,L1,Non-LTR Retrotransposon
+L1MC2,L1,Non-LTR Retrotransposon
+L1MC4,L1,Non-LTR Retrotransposon
+L1MCA_5,L1,Non-LTR Retrotransposon
+L1MCB_5,L1,Non-LTR Retrotransposon
+L1MCC_5,L1,Non-LTR Retrotransposon
+L1MD1,L1,Non-LTR Retrotransposon
+L1MD2,L1,Non-LTR Retrotransposon
+L1MD3,L1,Non-LTR Retrotransposon
+L1MDB_5,L1,Non-LTR Retrotransposon
+L1ME1,L1,Non-LTR Retrotransposon
+L1ME2,L1,Non-LTR Retrotransposon
+L1ME3,L1,Non-LTR Retrotransposon
+L1ME3A,L1,Non-LTR Retrotransposon
+L1ME4A,L1,Non-LTR Retrotransposon
+L1MEA_5,L1,Non-LTR Retrotransposon
+L1MEB_5,L1,Non-LTR Retrotransposon
+L1MED_5,L1,Non-LTR Retrotransposon
+L1MEE_5,L1,Non-LTR Retrotransposon
+L1ME_ORF2,L1,Non-LTR Retrotransposon
+L1PA10,L1,Non-LTR Retrotransposon
+L1PA11,L1,Non-LTR Retrotransposon
+L1PA12,L1,Non-LTR Retrotransposon
+L1PA12_5,L1,Non-LTR Retrotransposon
+L1PA13,L1,Non-LTR Retrotransposon
+L1PA13_5,L1,Non-LTR Retrotransposon
+L1PA14,L1,Non-LTR Retrotransposon
+L1PA14_5,L1,Non-LTR Retrotransposon
+L1PA15,L1,Non-LTR Retrotransposon
+L1PA16,L1,Non-LTR Retrotransposon
+L1PA16_5,L1,Non-LTR Retrotransposon
+L1PA17_5,L1,Non-LTR Retrotransposon
+L1PA2,L1,Non-LTR Retrotransposon
+L1PA3,L1,Non-LTR Retrotransposon
+L1PA4,L1,Non-LTR Retrotransposon
+L1PA5,L1,Non-LTR Retrotransposon
+L1PA6,L1,Non-LTR Retrotransposon
+L1PA7,L1,Non-LTR Retrotransposon
+L1PA7_5,L1,Non-LTR Retrotransposon
+L1PA8,L1,Non-LTR Retrotransposon
+L1PB1,L1,Non-LTR Retrotransposon
+L1PB2,L1,Non-LTR Retrotransposon
+L1PB2c,L1,Non-LTR Retrotransposon
+L1PB3,L1,Non-LTR Retrotransposon
+L1PB4,L1,Non-LTR Retrotransposon
+L1PBA1_5,L1,Non-LTR Retrotransposon
+L1PBA_5,L1,Non-LTR Retrotransposon
+L1PBB_5,L1,Non-LTR Retrotransposon
+L1PREC1,L1,Non-LTR Retrotransposon
+L1PREC2,L1,Non-LTR Retrotransposon
+L3,CR1,Non-LTR Retrotransposon
+LOOPER,other,other
+LOR1,ERV1,Endogenous Retrovirus
+LOR1I,ERV1,Endogenous Retrovirus
+LTR06,ERV1,Endogenous Retrovirus
+LTR1,ERV1,Endogenous Retrovirus
+LTR10B,ERV1,Endogenous Retrovirus
+LTR10B2,ERV1,Endogenous Retrovirus
+LTR10C,ERV1,Endogenous Retrovirus
+LTR10D,ERV1,Endogenous Retrovirus
+LTR10F,ERV1,Endogenous Retrovirus
+LTR11,other,other
+LTR12B,ERV1,Endogenous Retrovirus
+LTR12C,ERV1,Endogenous Retrovirus
+LTR12D,ERV1,Endogenous Retrovirus
+LTR12E,ERV1,Endogenous Retrovirus
+LTR13,ERV2,Endogenous Retrovirus
+LTR13A,ERV2,Endogenous Retrovirus
+LTR14,ERV2,Endogenous Retrovirus
+LTR14A,ERV2,Endogenous Retrovirus
+LTR14B,ERV2,Endogenous Retrovirus
+LTR14C,ERV2,Endogenous Retrovirus
+LTR15,ERV1,Endogenous Retrovirus
+LTR16,ERV3,Endogenous Retrovirus
+LTR16A1,ERV3,Endogenous Retrovirus
+LTR16A2,ERV3,Endogenous Retrovirus
+LTR16C,ERV3,Endogenous Retrovirus
+LTR16D,ERV3,Endogenous Retrovirus
+LTR16E,ERV3,Endogenous Retrovirus
+LTR17,ERV1,Endogenous Retrovirus
+LTR18A,ERV3,Endogenous Retrovirus
+LTR18B,ERV3,Endogenous Retrovirus
+LTR18C,ERV3,Endogenous Retrovirus
+LTR19A,ERV3,Endogenous Retrovirus
+LTR19B,ERV3,Endogenous Retrovirus
+LTR19C,ERV3,Endogenous Retrovirus
+LTR1B,ERV1,Endogenous Retrovirus
+LTR1B1,ERV1,Endogenous Retrovirus
+LTR1C,ERV1,Endogenous Retrovirus
+LTR1C2,ERV1,Endogenous Retrovirus
+LTR1D,ERV1,Endogenous Retrovirus
+LTR1E,ERV1,Endogenous Retrovirus
+LTR1F,ERV1,Endogenous Retrovirus
+LTR2,ERV1,Endogenous Retrovirus
+LTR21A,ERV1,Endogenous Retrovirus
+LTR21B,ERV1,Endogenous Retrovirus
+LTR21C,ERV1,Endogenous Retrovirus
+LTR22A,ERV2,Endogenous Retrovirus
+LTR22B,ERV2,Endogenous Retrovirus
+LTR22B1,ERV2,Endogenous Retrovirus
+LTR22B2,ERV2,Endogenous Retrovirus
+LTR22C2,ERV2,Endogenous Retrovirus
+LTR22E,ERV2,Endogenous Retrovirus
+LTR23,ERV1,Endogenous Retrovirus
+LTR24,ERV1,Endogenous Retrovirus
+LTR24B,ERV1,Endogenous Retrovirus
+LTR24C,ERV1,Endogenous Retrovirus
+LTR25,ERV1,Endogenous Retrovirus
+LTR26,ERV1,Endogenous Retrovirus
+LTR26C,ERV1,Endogenous Retrovirus
+LTR26D,ERV1,Endogenous Retrovirus
+LTR26E,ERV1,Endogenous Retrovirus
+LTR27,ERV1,Endogenous Retrovirus
+LTR2752,ERV1,Endogenous Retrovirus
+LTR27B,ERV1,Endogenous Retrovirus
+LTR27C,ERV1,Endogenous Retrovirus
+LTR27D,ERV1,Endogenous Retrovirus
+LTR27E,ERV1,Endogenous Retrovirus
+LTR28,ERV1,Endogenous Retrovirus
+LTR28B,ERV1,Endogenous Retrovirus
+LTR28C,ERV1,Endogenous Retrovirus
+LTR29,ERV1,Endogenous Retrovirus
+LTR2B,ERV1,Endogenous Retrovirus
+LTR2C,ERV1,Endogenous Retrovirus
+LTR3,ERV2,Endogenous Retrovirus
+LTR30,ERV1,Endogenous Retrovirus
+LTR31,ERV1,Endogenous Retrovirus
+LTR32,ERV3,Endogenous Retrovirus
+LTR34,ERV1,Endogenous Retrovirus
+LTR35,ERV1,Endogenous Retrovirus
+LTR35B,ERV1,Endogenous Retrovirus
+LTR36,ERV1,Endogenous Retrovirus
+LTR37A,ERV1,Endogenous Retrovirus
+LTR37B,ERV1,Endogenous Retrovirus
+LTR38,ERV1,Endogenous Retrovirus
+LTR38A1,ERV1,Endogenous Retrovirus
+LTR38B,ERV1,Endogenous Retrovirus
+LTR38C,ERV1,Endogenous Retrovirus
+LTR39,ERV1,Endogenous Retrovirus
+LTR3B,ERV2,Endogenous Retrovirus
+LTR4,ERV1,Endogenous Retrovirus
+LTR40A,ERV3,Endogenous Retrovirus
+LTR40B,ERV3,Endogenous Retrovirus
+LTR40C,ERV3,Endogenous Retrovirus
+LTR41,ERV3,Endogenous Retrovirus
+LTR41B,ERV3,Endogenous Retrovirus
+LTR41C,ERV3,Endogenous Retrovirus
+LTR42,ERV3,Endogenous Retrovirus
+LTR43,ERV1,Endogenous Retrovirus
+LTR43B,ERV1,Endogenous Retrovirus
+LTR44,ERV1,Endogenous Retrovirus
+LTR45,ERV1,Endogenous Retrovirus
+LTR45B,ERV1,Endogenous Retrovirus
+LTR45C,ERV1,Endogenous Retrovirus
+LTR46,ERV1,Endogenous Retrovirus
+LTR47A,ERV3,Endogenous Retrovirus
+LTR47A2,ERV3,Endogenous Retrovirus
+LTR47B,ERV3,Endogenous Retrovirus
+LTR47B2,ERV3,Endogenous Retrovirus
+LTR48,ERV1,Endogenous Retrovirus
+LTR48B,ERV1,Endogenous Retrovirus
+LTR49,ERV1,Endogenous Retrovirus
+LTR5,ERV2,Endogenous Retrovirus
+LTR50,ERV3,Endogenous Retrovirus
+LTR51,ERV1,Endogenous Retrovirus
+LTR52,ERV3,Endogenous Retrovirus
+LTR53,ERV3,Endogenous Retrovirus
+LTR53B,ERV3,Endogenous Retrovirus
+LTR55,ERV3,Endogenous Retrovirus
+LTR56,ERV1,Endogenous Retrovirus
+LTR57,ERV3,Endogenous Retrovirus
+LTR58,ERV1,Endogenous Retrovirus
+LTR59,ERV1,Endogenous Retrovirus
+LTR5B,ERV2,Endogenous Retrovirus
+LTR60,ERV1,Endogenous Retrovirus
+LTR60B,ERV1,Endogenous Retrovirus
+LTR61,ERV1,Endogenous Retrovirus
+LTR62,ERV3,Endogenous Retrovirus
+LTR64,ERV1,Endogenous Retrovirus
+LTR65,ERV1,Endogenous Retrovirus
+LTR66,ERV3,Endogenous Retrovirus
+LTR69,ERV3,Endogenous Retrovirus
+LTR6A,ERV1,Endogenous Retrovirus
+LTR6B,ERV1,Endogenous Retrovirus
+LTR6C,ERV1,Endogenous Retrovirus
+LTR6D,ERV1,Endogenous Retrovirus
+LTR70,ERV1,Endogenous Retrovirus
+LTR71A,ERV1,Endogenous Retrovirus
+LTR71B,ERV1,Endogenous Retrovirus
+LTR72,ERV1,Endogenous Retrovirus
+LTR72B,ERV1,Endogenous Retrovirus
+LTR73,ERV1,Endogenous Retrovirus
+LTR75,ERV3,Endogenous Retrovirus
+LTR75B,ERV3,Endogenous Retrovirus
+LTR76,ERV1,Endogenous Retrovirus
+LTR77,ERV1,Endogenous Retrovirus
+LTR77B,ERV3,Endogenous Retrovirus
+LTR78B,ERV1,Endogenous Retrovirus
+LTR7A,ERV3,Endogenous Retrovirus
+LTR7B,ERV3,Endogenous Retrovirus
+LTR7C,ERV3,Endogenous Retrovirus
+LTR8,ERV1,Endogenous Retrovirus
+LTR81AB,ERV1,Endogenous Retrovirus
+LTR8A,ERV1,Endogenous Retrovirus
+LTR8B,ERV1,Endogenous Retrovirus
+LTR9,ERV1,Endogenous Retrovirus
+LTR91,ERV3,Endogenous Retrovirus
+LTR9A1,ERV1,Endogenous Retrovirus
+LTR9B,ERV1,Endogenous Retrovirus
+LTR9C,ERV1,Endogenous Retrovirus
+LTR9D,ERV1,Endogenous Retrovirus
+MADE1,Mariner/Tc1,DNA transposon
+MARNA,Mariner/Tc1,DNA transposon
+MER101,ERV1,Endogenous Retrovirus
+MER101B,ERV1,Endogenous Retrovirus
+MER103B,hAT,DNA transposon
+MER103C,hAT,DNA transposon
+MER106,hAT,DNA transposon
+MER106B,hAT,DNA transposon
+MER107,hAT,DNA transposon
+MER110,ERV1,Endogenous Retrovirus
+MER110A,ERV1,Endogenous Retrovirus
+MER110I,ERV1,Endogenous Retrovirus
+MER112,hAT,DNA transposon
+MER113,hAT,DNA transposon
+MER113B,hAT,DNA transposon
+MER117,hAT,DNA transposon
+MER119,hAT,DNA transposon
+MER11A,ERV2,Endogenous Retrovirus
+MER11C,ERV2,Endogenous Retrovirus
+MER11D,ERV2,Endogenous Retrovirus
+MER1A,hAT,DNA transposon
+MER1B,hAT,DNA transposon
+MER20,hAT,DNA transposon
+MER20B,hAT,DNA transposon
+MER21,ERV3,Endogenous Retrovirus
+MER21A,ERV3,Endogenous Retrovirus
+MER21I,ERV1,Endogenous Retrovirus
+MER28,Mariner/Tc1,DNA transposon
+MER30B,hAT,DNA transposon
+MER31,other,other
+MER31B,ERV1,Endogenous Retrovirus
+MER31_I,other,other
+MER33,hAT,DNA transposon
+MER34,ERV1,Endogenous Retrovirus
+MER34B,ERV1,Endogenous Retrovirus
+MER34B_I,other,other
+MER34C,ERV1,Endogenous Retrovirus
+MER34C2,ERV1,Endogenous Retrovirus
+MER39,ERV1,Endogenous Retrovirus
+MER39B,ERV1,Endogenous Retrovirus
+MER41A,ERV1,Endogenous Retrovirus
+MER41B,ERV1,Endogenous Retrovirus
+MER41C,ERV1,Endogenous Retrovirus
+MER41D,ERV1,Endogenous Retrovirus
+MER41F,other,other
+MER41G,ERV1,Endogenous Retrovirus
+MER41I,other,other
+MER44A,Mariner/Tc1,DNA transposon
+MER44B,Mariner/Tc1,DNA transposon
+MER44C,Mariner/Tc1,DNA transposon
+MER45,hAT,DNA transposon
+MER45B,other,other
+MER45C,hAT,DNA transposon
+MER45R,other,other
+MER48,ERV1,Endogenous Retrovirus
+MER49,ERV1,Endogenous Retrovirus
+MER4A,ERV1,Endogenous Retrovirus
+MER4A1,ERV1,Endogenous Retrovirus
+MER4B,ERV1,Endogenous Retrovirus
+MER4BI,other,other
+MER4C,ERV1,Endogenous Retrovirus
+MER4CL34,ERV1,Endogenous Retrovirus
+MER4D,ERV1,Endogenous Retrovirus
+MER4D1,ERV1,Endogenous Retrovirus
+MER4E,ERV1,Endogenous Retrovirus
+MER4E1,ERV1,Endogenous Retrovirus
+MER4I,ERV1,Endogenous Retrovirus
+MER50,ERV1,Endogenous Retrovirus
+MER50B,ERV1,Endogenous Retrovirus
+MER50I,ERV1,Endogenous Retrovirus
+MER51A,ERV1,Endogenous Retrovirus
+MER51B,ERV1,Endogenous Retrovirus
+MER51C,ERV1,Endogenous Retrovirus
+MER51D,ERV1,Endogenous Retrovirus
+MER51E,ERV1,Endogenous Retrovirus
+MER51I,ERV1,Endogenous Retrovirus
+MER52A,ERV1,Endogenous Retrovirus
+MER52AI,ERV1,Endogenous Retrovirus
+MER52B,ERV1,Endogenous Retrovirus
+MER52C,ERV1,Endogenous Retrovirus
+MER52D,ERV1,Endogenous Retrovirus
+MER53,other,other
+MER54,other,other
+MER54A,ERV3,Endogenous Retrovirus
+MER54B,ERV3,Endogenous Retrovirus
+MER57A1,ERV1,Endogenous Retrovirus
+MER57A_I,other,other
+MER57B2,ERV1,Endogenous Retrovirus
+MER57F,ERV1,Endogenous Retrovirus
+MER57I,other,other
+MER5B,hAT,DNA transposon
+MER61A,other,other
+MER61B,ERV1,Endogenous Retrovirus
+MER61C,ERV1,Endogenous Retrovirus
+MER61D,ERV1,Endogenous Retrovirus
+MER61E,ERV1,Endogenous Retrovirus
+MER61F,ERV1,Endogenous Retrovirus
+MER61I,ERV1,Endogenous Retrovirus
+MER63A,other,other
+MER63B,other,other
+MER63D,hAT,DNA transposon
+MER65B,ERV1,Endogenous Retrovirus
+MER65C,ERV1,Endogenous Retrovirus
+MER65D,ERV1,Endogenous Retrovirus
+MER66A,ERV1,Endogenous Retrovirus
+MER66B,ERV1,Endogenous Retrovirus
+MER66C,ERV1,Endogenous Retrovirus
+MER66D,ERV1,Endogenous Retrovirus
+MER66_I,ERV1,Endogenous Retrovirus
+MER67A,ERV1,Endogenous Retrovirus
+MER67B,ERV1,Endogenous Retrovirus
+MER67C,ERV1,Endogenous Retrovirus
+MER67D,ERV1,Endogenous Retrovirus
+MER68B,ERV3,Endogenous Retrovirus
+MER68C,ERV3,Endogenous Retrovirus
+MER69C,hAT,DNA transposon
+MER6B,Mariner/Tc1,DNA transposon
+MER70A,ERV3,Endogenous Retrovirus
+MER70B,ERV3,Endogenous Retrovirus
+MER70C,ERV3,Endogenous Retrovirus
+MER72,ERV1,Endogenous Retrovirus
+MER72B,ERV1,Endogenous Retrovirus
+MER73,ERV3,Endogenous Retrovirus
+MER74B,ERV3,Endogenous Retrovirus
+MER74C,ERV3,Endogenous Retrovirus
+MER75,piggyBac,DNA transposon
+MER75B,other,other
+MER76,ERV3,Endogenous Retrovirus
+MER77,ERV3,Endogenous Retrovirus
+MER8,Mariner/Tc1,DNA transposon
+MER80B,hAT,DNA transposon
+MER81,hAT,DNA transposon
+MER83,ERV1,Endogenous Retrovirus
+MER83AI,ERV1,Endogenous Retrovirus
+MER83B,ERV1,Endogenous Retrovirus
+MER83BI,ERV1,Endogenous Retrovirus
+MER83C,ERV1,Endogenous Retrovirus
+MER84,ERV1,Endogenous Retrovirus
+MER84I,other,other
+MER85,other,other
+MER87,ERV1,Endogenous Retrovirus
+MER87B,ERV1,Endogenous Retrovirus
+MER88,ERV3,Endogenous Retrovirus
+MER89,ERV1,Endogenous Retrovirus
+MER89I,ERV1,Endogenous Retrovirus
+MER9,ERV2,Endogenous Retrovirus
+MER90,ERV1,Endogenous Retrovirus
+MER91A,hAT,DNA transposon
+MER91C,hAT,DNA transposon
+MER92A,ERV1,Endogenous Retrovirus
+MER92B,ERV1,Endogenous Retrovirus
+MER94,hAT,DNA transposon
+MER94B,hAT,DNA transposon
+MER95,ERV1,Endogenous Retrovirus
+MER96,hAT,DNA transposon
+MER96B,hAT,DNA transposon
+MER97A,hAT,DNA transposon
+MER97B,hAT,DNA transposon
+MER97C,hAT,DNA transposon
+MER99,other,other
+MER9B,ERV2,Endogenous Retrovirus
+Merlin1_HS,Merlin,DNA transposon
+MLT1G,ERV3,Endogenous Retrovirus
+MLT1G1,ERV3,Endogenous Retrovirus
+MLT1G2,ERV3,Endogenous Retrovirus
+MLT1G3,ERV3,Endogenous Retrovirus
+MLT1H,ERV3,Endogenous Retrovirus
+MLT1H1,ERV3,Endogenous Retrovirus
+MLT1H2,ERV3,Endogenous Retrovirus
+MLT1I,ERV3,Endogenous Retrovirus
+MLT1K,ERV3,Endogenous Retrovirus
+MLT1L,ERV3,Endogenous Retrovirus
+MLT1N2,ERV3,Endogenous Retrovirus
+MLT2A1,ERV3,Endogenous Retrovirus
+MLT2A2,ERV3,Endogenous Retrovirus
+MLT2C2,ERV3,Endogenous Retrovirus
+MLT2D,ERV3,Endogenous Retrovirus
+MSTB,ERV3,Endogenous Retrovirus
+MSTD,ERV3,Endogenous Retrovirus
+PABL_A,ERV1,Endogenous Retrovirus
+PABL_AI,ERV1,Endogenous Retrovirus
+PABL_B,ERV1,Endogenous Retrovirus
+PABL_BI,ERV1,Endogenous Retrovirus
+PRIMA41,other,other
+PRIMA4_I,other,other
+PRIMA4_LTR,ERV1,Endogenous Retrovirus
+PRIMAX_I,other,other
+PrimLTR79,ERV1,Endogenous Retrovirus
+PTR5,ERV1,Endogenous Retrovirus
+Retroposon-1_HS,other,other
+SVA_A,other,other
+SVA_B,other,other
+SVA_C,other,other
+SVA_D,other,other
+SVA_E,other,other
+SVA_F,other,other
+THE1A,ERV3,Endogenous Retrovirus
+THE1C,ERV3,Endogenous Retrovirus
+THE1D,ERV3,Endogenous Retrovirus
+THE1_I,ERV3,Endogenous Retrovirus
+TIGGER1,Mariner/Tc1,DNA transposon
+TIGGER2,Mariner/Tc1,DNA transposon
+TIGGER5,Mariner/Tc1,DNA transposon
+TIGGER6B,Mariner/Tc1,DNA transposon
+TIGGER7,Mariner/Tc1,DNA transposon
+TIGGER8,Mariner/Tc1,DNA transposon
+TIGGER9,Mariner/Tc1,DNA transposon
+ZAPHOD,other,other
+ZOMBI_A,Mariner/Tc1,DNA transposon
+hs1_ct_MyTrack_6202_0_chr3_75717522_75720411,other,other
+hs1_ct_MyTrack_6202_1_chr3_200839766_200841218,other,other
+hs1_ct_MyTrack_6202_2_chr3_200839766_200840591,other,other
+hs1_ct_MyTrack_6202_3_chr3_200839778_200841072,other,other
+hs1_ct_MyTrack_6202_4_chr3_200839860_200841530,other,other
+hs1_ct_MyTrack_6202_0_chr4_193392562_193395461,other,other
+hs1_ct_MyTrack_6202_1_chr4_193392578_193395464,other,other
+hs1_ct_MyTrack_6202_0_chr10_134575321_134578220,other,other
+hs1_ct_MyTrack_6202_0_chr16_38648450_38650951,other,other
+hs1_ct_MyTrack_6202_1_chr16_38648473_38651516,other,other
+hs1_ct_MyTrack_6202_2_chr16_38649492_38650313,other,other
+hs1_ct_MyTrack_6202_3_chr16_38721582_38723182,other,other
+hs1_ct_MyTrack_6202_4_chr16_38792052_38793663,other,other
+hs1_ct_MyTrack_6202_5_chr16_38881421_38883038,other,other
+hs1_ct_MyTrack_6202_0_chr18_14300558_14302119,other,other
+hs1_ct_MyTrack_6202_0_chr20_31044949_31046595,other,other
+hs1_ct_MyTrack_6202_0_chr21_12363131_12364794,other,other
+hs1_ct_MyTrack_6202_0_chr22_9320945_9323834,other,other
+GAPDH_NM_002046.7,other,other
+ACTB_NM_001101.5,other,other
+PGK1_NM_000291.4,other,other
+TBP_NM_003194.5,other,other
+EEF1A1_NM_001402.6,other,other
