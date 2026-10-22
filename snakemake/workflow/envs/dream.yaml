@@ -1,0 +1,13 @@
+name: dream
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - r-base=4.4
+  - bioconductor-variancepartition
+  - bioconductor-limma
+  - bioconductor-edger
+  - bioconductor-biocparallel
+  - r-openxlsx
+  - r-rmarkdown
+  - r-knitr

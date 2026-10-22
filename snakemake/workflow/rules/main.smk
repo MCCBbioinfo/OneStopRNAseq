@@ -49,6 +49,49 @@ rule DESeq2:
         'D=DESeq2; rm -f $D/$D.zip && [ -d $D ] && zip -rq  $D/$D.zip $D/ >> {log} 2>&1;'
 
 
+rule Dream:
+    input:
+        cnt=DESeq2_input(config),
+        meta=config['META'],
+        contrast=config["CONTRAST_DE"],
+    output:
+        "Dream/Dream.html",
+        expand("Dream/rnk/{contrast}.rnk", contrast=DE_CONTRAST_NAMES)
+    conda:
+        "../envs/dream.yaml"
+    resources:
+        mem_mb=lambda wildcards, attempt: attempt * 8000,
+    params:
+        rmd="'./Dream/dream.Rmd'",
+        fdr=config['MAX_FDR'],
+        lfc=config['MIN_LFC'],
+        anno_tab=config['ANNO_TAB'],
+        o="'Dream.html'"
+    priority:
+        100
+    threads:
+        4
+    log:
+        "Dream/Dream.log"
+    benchmark:
+        "Dream/Dream.benchmark"
+    shell:
+        'mkdir -p Dream; '
+        'cp workflow/script/dream.Rmd Dream; '
+        'Rscript -e "rmarkdown::render( \
+        {params.rmd}, \
+        params=list( \
+            max_fdr={params.fdr}, \
+            min_lfc={params.lfc}, \
+            countFile=\'../{input.cnt}\', \
+            annoFile=\'{params.anno_tab}\', \
+            metaFile=\'../{input.meta}\', \
+            contrastFile=\'../{input.contrast}\' \
+            ), \
+        output_file={params.o})" > {log} 2>&1 ;'
+        'D=Dream; rm -f $D/$D.zip && [ -d $D ] && zip -rq  $D/$D.zip $D/ >> {log} 2>&1;'
+
+
 rule Create_DAG:
     input:
         "config.yaml"

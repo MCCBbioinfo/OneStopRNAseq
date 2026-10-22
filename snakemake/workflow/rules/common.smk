@@ -82,7 +82,7 @@ def check_and_update_config(config):
     if config['START'] == 'FASTQ' and 'MAX_FASTQ_SIZE' in config:  # skip check if config ignored this
         check_fastq_size(config,SAMPLES)
 
-    if config['DESEQ2_ANALYSIS'] and config['START'] in ["FASTQ", "BAM", "COUNT"]:
+    if (config['DESEQ2_ANALYSIS'] or config.get('DREAM_ANALYSIS', False)) and config['START'] in ["FASTQ", "BAM", "COUNT"]:
         DE_CONTRAST_NAMES = get_contrast_fnames(config['CONTRAST_DE'])
         DE_CONTRAST_NAMES = [x.replace("-",'.') for x in DE_CONTRAST_NAMES]
     else:
@@ -452,21 +452,98 @@ def check_contrast_file(fname="meta/contrast.de.txt"):
             "group names can be separated by `;` to combine GROUP_LABELS\n\n")
 
 
-def check_meta_file(fname="meta/meta.txt"):
+def _meta_text(series):
+    text = series.where(series.notna(), "")
+    text = text.astype(str).str.strip()
+    text = text.str.replace(r"\.0$", "", regex=True)
+    return text
+
+
+def _bad_dream_labels(values):
+    bad = []
+    for value in values:
+        if (value == "" or value == "NA" or len(value) > 30 or value[0].isdigit()
+                or re.fullmatch(r"[A-Za-z0-9_]+", value) is None):
+            bad.append(value if value != "" else "(blank)")
+    return bad
+
+
+def check_dream_meta(df, fname):
+    """Dream sheet: SAMPLE_LABEL, GROUP_LABEL, BATCH, SUBJECT, TIME."""
+    needed = ["SAMPLE_LABEL", "GROUP_LABEL", "BATCH", "SUBJECT", "TIME"]
+    missing = [col for col in needed if col not in list(df.columns)]
+    if missing:
+        raise ValueError(
+            fname + " Dream metadata needs columns SAMPLE_LABEL, GROUP_LABEL, BATCH, SUBJECT, TIME. Missing: "
+            + ", ".join(missing) + "\n")
+    for col in needed:
+        df[col] = _meta_text(df[col])
+
+    for col in ["SAMPLE_LABEL", "GROUP_LABEL", "SUBJECT", "TIME"]:
+        bad = _bad_dream_labels(df[col].tolist())
+        if bad:
+            raise ValueError(
+                fname + " column " + col +
+                " must contain only letters, numbers, or underscore, must not start with a number, "
+                "must not be NA, and must be at most 30 characters. Problem values: "
+                + ", ".join(bad) + "\n")
+    bad_batch = [v if v != "" else "(blank)" for v in df["BATCH"].tolist() if not str(v).isdigit()]
+    if bad_batch:
+        raise ValueError(fname + " BATCH must contain only digits. Problem values: " + ", ".join(bad_batch) + "\n")
+    if df["SAMPLE_LABEL"].duplicated().any():
+        raise ValueError(fname + " has duplicated SAMPLE_LABEL values\n")
+    if df["GROUP_LABEL"].nunique() < 2:
+        raise ValueError(fname + " must have at least two GROUP_LABEL values\n")
+    small_groups = df["GROUP_LABEL"].value_counts()
+    small_groups = small_groups[small_groups < 2]
+    if len(small_groups):
+        raise ValueError(
+            fname + " each group must have at least two samples. Groups with one sample: "
+            + ", ".join(small_groups.index.astype(str)) + "\n")
+    all_batches = set(df["BATCH"])
+    for group, part in df.groupby("GROUP_LABEL"):
+        absent = sorted(all_batches - set(part["BATCH"]))
+        if absent:
+            raise ValueError(fname + " group " + str(group) + " lacks batch " + ", ".join(absent) + "\n")
+    subject_n = df["SUBJECT"].value_counts()
+    once = subject_n[subject_n < 2]
+    if len(once):
+        raise ValueError(
+            fname + " each subject must be measured more than once. These subjects appear once: "
+            + ", ".join(once.index.astype(str)) + "\n")
+    if df["TIME"].nunique() < 2:
+        raise ValueError(fname + " TIME must have at least two levels\n")
+    pair = df["SUBJECT"] + "|" + df["TIME"]
+    if pair.duplicated().any():
+        raise ValueError(
+            fname + " a subject cannot have the same time point twice: "
+            + ", ".join(pair[pair.duplicated()].unique().astype(str)) + "\n")
+    groups_per_subject = df.groupby("SUBJECT")["GROUP_LABEL"].nunique()
+    switched = groups_per_subject[groups_per_subject > 1]
+    if len(switched):
+        raise ValueError(
+            fname + " each subject must belong to one group. These subjects have more than one GROUP_LABEL: "
+            + ", ".join(switched.index.astype(str)) + "\n")
+
+
+def check_meta_file(fname="meta/meta.txt", dream=False):
     df = read_table(fname)
     if df.duplicated().any():
         raise ValueError(fname + " has duplicated rows, please fix and re-run")
-    if df.shape[1] != 3:
+    if dream:
+        check_dream_meta(df, fname)
+    elif df.shape[1] != 3:
         raise ValueError(fname + " does not have three columns: SAMPLE_LABEL\tGROUP_LABEL\tBATCH\n\n")
 
 
 def check_CONTRAST_and_META(config):
-    if config['DESEQ2_ANALYSIS']:
+    dream = bool(config.get('DREAM_ANALYSIS', False))
+    if config['DESEQ2_ANALYSIS'] or dream:
         check_contrast_file(config['CONTRAST_DE'])
     if config['RMATS_ANALYSIS'] or config['DEXSEQ_ANALYSIS']:
         check_contrast_file(config['CONTRAST_AS'])
-    if config['DESEQ2_ANALYSIS'] or config['RMATS_ANALYSIS'] or config['DEXSEQ_ANALYSIS']:
-        check_meta_file(config['META'])
+    if config['DESEQ2_ANALYSIS'] or config['RMATS_ANALYSIS'] or config['DEXSEQ_ANALYSIS'] or dream:
+        check_meta_file(config['META'], dream=dream)
 
 
 def split_msheet_rnk_file(config):
@@ -520,6 +597,8 @@ def input_rnk_fname1(wildcards, config):
         fname1 = 'meta/' + wildcards['fname']  # meta/test1.rnk.txt
     elif config['START'] == 'RNK':  # not MSHEET
         fname1 = 'meta/' + wildcards['fname']  # meta/test1.rnk.txt
+    elif config.get('DREAM_ANALYSIS', False):
+        fname1 = "Dream/rnk/" + wildcards['fname'] + ".rnk"
     elif config['START'] == 'FASTQ' and config['CleanUpRNAseqCorrection']:
         fname1 = "CleanUpRNAseqDE/rnk/" + wildcards['fname'] + ".rnk"
     else:

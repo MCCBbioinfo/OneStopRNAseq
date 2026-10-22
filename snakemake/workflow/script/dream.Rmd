@@ -1,0 +1,229 @@
+---
+title: "Repeated-measures differential expression (Dream)"
+output:
+  html_document:
+    toc: yes
+    code_folding: hide
+    toc_float: yes
+params:
+  max_fdr: 0.05
+  min_lfc: 0.585
+  countFile: "meta/COUNT.txt"
+  annoFile: "anno.txt"
+  metaFile: "meta/meta.xlsx"
+  contrastFile: "meta/contrast.de.xlsx"
+---
+
+The model is `~ GROUP_LABEL * TIME + (1|SUBJECT)`. When the metadata has more than one batch, batch is added as a fixed effect, `~ GROUP_LABEL * TIME + BATCH + (1|SUBJECT)`, the same rule DESeq2 uses. A single batch is left out. Each contrast compares GROUP A with GROUP B at the reference level of TIME. Batch, TIME, and the group-by-time interaction stay in the model and are not part of the contrast.
+
+```{r setup, include=FALSE}
+library(edgeR)
+library(limma)
+library(variancePartition)
+library(openxlsx)
+dir.create("rnk", showWarnings = FALSE)
+```
+
+```{r read}
+read_table <- function(fname) {
+  if (grepl("\\.xlsx$", fname, ignore.case = TRUE)) {
+    openxlsx::read.xlsx(fname, sheet = 1)
+  } else if (grepl("\\.csv$", fname, ignore.case = TRUE)) {
+    read.csv(fname, check.names = FALSE, comment.char = "#")
+  } else {
+    read.delim(fname, check.names = FALSE, comment.char = "#")
+  }
+}
+
+meta.df <- read_table(params$metaFile)
+needed <- c("SAMPLE_LABEL", "GROUP_LABEL", "BATCH", "SUBJECT", "TIME")
+missing <- setdiff(needed, colnames(meta.df))
+if (length(missing) > 0) {
+  stop("Dream metadata is missing columns: ", paste(missing, collapse = ", "))
+}
+meta.df$GROUP_LABEL <- factor(meta.df$GROUP_LABEL)
+meta.df$TIME <- factor(meta.df$TIME)
+meta.df$SUBJECT <- factor(meta.df$SUBJECT)
+meta.df$BATCH <- factor(meta.df$BATCH)
+meta.df$SAMPLE_LABEL <- as.character(meta.df$SAMPLE_LABEL)
+
+contrast.df <- read_table(params$contrastFile)
+counts.df <- read_table(params$countFile)
+```
+
+```{r counts}
+gene_id <- as.character(counts.df[[1]])
+gene_id <- sub("\\.[0-9]+$", "", gene_id)
+if (any(duplicated(gene_id))) gene_id <- make.unique(gene_id)
+
+n_abundance <- sum(grepl("abundance", colnames(counts.df)))
+n_counts <- sum(grepl("^counts\\.", colnames(counts.df)))
+n_lengths <- sum(grepl("^length\\.", colnames(counts.df)))
+salmon_format <- n_abundance > 0 && n_abundance == n_counts && n_counts == n_lengths
+
+if (ncol(counts.df) > 6 && colnames(counts.df)[2] %in% c("Chr", "chr") &&
+    colnames(counts.df)[3] %in% c("Start", "start") && colnames(counts.df)[4] %in% c("End", "end")) {
+  sample_cols <- 7:ncol(counts.df)
+} else if (colnames(counts.df)[1] %in% c("Name", "Gene") && colnames(counts.df)[2] == "Type") {
+  sample_cols <- 3:ncol(counts.df)
+} else if (salmon_format) {
+  sample_cols <- grep("^counts\\.", colnames(counts.df))
+} else if (ncol(counts.df) - 1 == nrow(meta.df)) {
+  sample_cols <- 2:ncol(counts.df)
+} else {
+  stop("COUNT file is not featureCounts, a clean count table, an OSR count table, or Salmon quant.")
+}
+
+count_mat <- as.matrix(suppressWarnings(apply(counts.df[, sample_cols, drop = FALSE], 2, as.numeric)))
+rownames(count_mat) <- gene_id
+colnames(count_mat) <- sub("\\.bam$", "", colnames(count_mat))
+colnames(count_mat) <- sub("^sorted_reads\\.", "", colnames(count_mat))
+colnames(count_mat) <- sub("^mapped_reads\\.", "", colnames(count_mat))
+colnames(count_mat) <- sub("^counts\\.", "", colnames(count_mat))
+colnames(count_mat) <- sub("\\.COUNT$", "", colnames(count_mat))
+count_mat[is.na(count_mat)] <- 0
+
+keep_samples <- meta.df$SAMPLE_LABEL %in% colnames(count_mat)
+if (!all(keep_samples)) {
+  stop("These metadata samples are not in the count table: ",
+       paste(meta.df$SAMPLE_LABEL[!keep_samples], collapse = ", "))
+}
+meta.df <- meta.df[match(intersect(meta.df$SAMPLE_LABEL, colnames(count_mat)), meta.df$SAMPLE_LABEL), , drop = FALSE]
+meta.df$GROUP_LABEL <- droplevels(meta.df$GROUP_LABEL)
+meta.df$TIME <- droplevels(meta.df$TIME)
+meta.df$SUBJECT <- droplevels(meta.df$SUBJECT)
+meta.df$BATCH <- droplevels(meta.df$BATCH)
+count_mat <- count_mat[, meta.df$SAMPLE_LABEL, drop = FALSE]
+```
+
+```{r fit}
+use_batch <- nlevels(meta.df$BATCH) > 1
+if (use_batch) {
+  fixed_form <- ~ GROUP_LABEL * TIME + BATCH
+  form <- ~ GROUP_LABEL * TIME + BATCH + (1|SUBJECT)
+} else {
+  fixed_form <- ~ GROUP_LABEL * TIME
+  form <- ~ GROUP_LABEL * TIME + (1|SUBJECT)
+}
+design0 <- model.matrix(fixed_form, meta.df)
+if (qr(design0)$rank < ncol(design0)) {
+  stop("Batch cannot be estimated together with group and time. A batch is identical to a group, a time, or their combination. Use one batch label, or a batch that is shared across groups.")
+}
+
+dge <- DGEList(counts = count_mat)
+keep <- filterByExpr(dge, design0)
+dge <- dge[keep, , keep.lib.sizes = FALSE]
+dge <- calcNormFactors(dge)
+vobj <- voomWithDreamWeights(dge, form, meta.df)
+```
+
+```{r annotation}
+anno_key <- NULL
+anno_symbol <- NULL
+read_anno <- function(fname) {
+  if (grepl("^https?://", fname)) {
+    tmp <- tempfile()
+    download.file(fname, destfile = tmp, method = "auto", quiet = TRUE)
+    read.delim(tmp, quote = "", comment.char = "")
+  } else {
+    read.delim(fname, quote = "", comment.char = "")
+  }
+}
+tryCatch({
+  anno <- read_anno(params$annoFile)
+  anno <- anno[!duplicated(anno[[1]]), , drop = FALSE]
+  if (sum(anno[[1]] %in% rownames(count_mat)) >= 1 && "Name" %in% colnames(anno)) {
+    anno_key <- anno[[1]]
+    anno_symbol <- as.character(anno[["Name"]])
+  } else if (ncol(anno) >= 2 && sum(anno[[2]] %in% rownames(count_mat)) >= 1 && "Gene" %in% colnames(anno)) {
+    anno_key <- anno[[2]]
+    anno_symbol <- as.character(anno[["Gene"]])
+  } else {
+    warning("Annotation and count IDs do not match. Rank files will use the count-table IDs.")
+  }
+}, error = function(e) {
+  warning("Annotation was not applied: ", conditionMessage(e))
+})
+
+rank_names <- function(gene_ids) {
+  if (is.null(anno_symbol)) return(toupper(gene_ids))
+  hit <- anno_symbol[match(gene_ids, anno_key)]
+  missing <- is.na(hit) | hit == ""
+  hit[missing] <- gene_ids[missing]
+  toupper(hit)
+}
+```
+
+```{r contrasts}
+contrast_name <- function(numerator, denominator, index) {
+  clean <- function(x) {
+    x <- gsub(" ", "", as.character(x))
+    x <- sub(";$", "", x)
+    gsub(";", ".", x)
+  }
+  name <- paste0(clean(numerator), "_vs_", clean(denominator))
+  if (nchar(name) > 100) name <- paste0("contrast", index)
+  gsub("-", ".", name)
+}
+
+group_contrast <- function(data, numerator, denominator, fixed_form) {
+  design <- model.matrix(fixed_form, data)
+  L <- setNames(numeric(ncol(design)), colnames(design))
+  ref <- levels(data$GROUP_LABEL)[1]
+  add_side <- function(L, groups, sign) {
+    groups <- trimws(unlist(strsplit(groups, ";")))
+    groups <- groups[groups != ""]
+    if (length(groups) == 0) return(L)
+    weight <- sign / length(groups)
+    for (g in groups) {
+      if (g == ref) next
+      coef_name <- paste0("GROUP_LABEL", g)
+      if (!coef_name %in% names(L)) stop("No coefficient for group ", g)
+      L[coef_name] <- L[coef_name] + weight
+    }
+    L
+  }
+  L <- add_side(L, numerator, 1)
+  L <- add_side(L, denominator, -1)
+  if (!any(L != 0)) stop("Contrast has no group difference: ", numerator, " vs ", denominator)
+  L
+}
+
+results <- list()
+for (j in seq_len(ncol(contrast.df))) {
+  numerator <- as.character(contrast.df[1, j])
+  denominator <- as.character(contrast.df[2, j])
+  if (is.na(numerator) || is.na(denominator) || numerator == "" || denominator == "") next
+  name <- contrast_name(numerator, denominator, j)
+  L <- group_contrast(meta.df, numerator, denominator, fixed_form)
+  Lmat <- matrix(L, ncol = 1, dimnames = list(names(L), name))
+  fit <- dream(vobj, form, meta.df, Lmat)
+  fit <- eBayes(fit)
+  tab <- topTable(fit, coef = name, number = Inf, sort.by = "none")
+  tab$gene <- rownames(tab)
+  tab$contrast <- name
+  sig <- !is.na(tab$adj.P.Val) & tab$adj.P.Val < params$max_fdr & abs(tab$logFC) > params$min_lfc
+  write.xlsx(tab, paste0(name, ".dream.xlsx"), overwrite = TRUE)
+  write.xlsx(tab[sig, , drop = FALSE],
+             paste0(name, ".dream.sig.FDR", params$max_fdr, ".LFC", params$min_lfc, ".xlsx"),
+             overwrite = TRUE)
+  rnk <- data.frame(`# Name` = rank_names(tab$gene), log2FoldChange_shrunken = tab$logFC, check.names = FALSE)
+  rnk <- rnk[order(rnk$log2FoldChange_shrunken), ]
+  write.table(rnk, paste0("rnk/", name, ".rnk"),
+              sep = "\t", quote = FALSE, row.names = FALSE)
+  results[[name]] <- data.frame(contrast = name, genes = nrow(tab), significant = sum(sig))
+}
+
+knitr::kable(do.call(rbind, results))
+```
+
+```{r design}
+cat("Samples:", nrow(meta.df), "\n")
+cat("Subjects:", nlevels(meta.df$SUBJECT), "\n")
+cat("Times:", paste(levels(meta.df$TIME), collapse = ", "), "\n")
+cat("Groups:", paste(levels(meta.df$GROUP_LABEL), collapse = ", "), "\n")
+cat("Batches:", paste(levels(meta.df$BATCH), collapse = ", "), "\n")
+cat("Formula:", paste(deparse(form), collapse = " "), "\n")
+cat("Reference time for the group contrast:", levels(meta.df$TIME)[1], "\n")
+print(table(Subject = meta.df$SUBJECT, Time = meta.df$TIME, Group = meta.df$GROUP_LABEL, Batch = meta.df$BATCH))
+```

@@ -41,6 +41,7 @@ VCF: example_data/genome/mm10_chr19/BALB_cJ.mgp.v5.indels.dbSNP142.normed.chr.vc
 COUNT_FILE: meta/COUNT.xlsx
 
 DESEQ2_ANALYSIS: True
+DREAM_ANALYSIS: False
 MAX_FDR: 0.05
 MIN_LFC: 0.585
 META: meta/meta.csv       # see example files
