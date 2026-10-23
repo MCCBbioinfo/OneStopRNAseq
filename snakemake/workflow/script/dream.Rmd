@@ -83,10 +83,13 @@ if (ncol(counts.df) > 6 && colnames(counts.df)[2] %in% c("Chr", "chr") &&
 
 count_mat <- as.matrix(suppressWarnings(apply(counts.df[, sample_cols, drop = FALSE], 2, as.numeric)))
 rownames(count_mat) <- gene_id
+# featureCounts names columns with the BAM path (mapped_reads/sample.bam).
+# Drop the directory, then a dot- or slash-separated prefix.
+colnames(count_mat) <- basename(colnames(count_mat))
 colnames(count_mat) <- sub("\\.bam$", "", colnames(count_mat))
-colnames(count_mat) <- sub("^sorted_reads\\.", "", colnames(count_mat))
-colnames(count_mat) <- sub("^mapped_reads\\.", "", colnames(count_mat))
-colnames(count_mat) <- sub("^counts\\.", "", colnames(count_mat))
+colnames(count_mat) <- sub("^sorted_reads[./]", "", colnames(count_mat))
+colnames(count_mat) <- sub("^mapped_reads[./]", "", colnames(count_mat))
+colnames(count_mat) <- sub("^counts[./]", "", colnames(count_mat))
 colnames(count_mat) <- sub("\\.COUNT$", "", colnames(count_mat))
 count_mat[is.na(count_mat)] <- 0
 
