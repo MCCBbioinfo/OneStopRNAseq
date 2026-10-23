@@ -55,7 +55,7 @@ def target_input(config, ASCN):
         l.append("fastqc/fastqc.zip")
         l.append("fastqc/CheckFile/all.txt")  # check fastq.gz size after trimming, if empty, abort
 
-        if config.get('SPECIES') in {'hg38', 'mm39'}:
+        if config.get('SALMON_ANALYSIS', False) and config.get('SPECIES') in {'hg38', 'mm39'}:
             l.extend(
                 expand(
                     "Salmon_output/{sample}/quant.sf",
@@ -67,9 +67,9 @@ def target_input(config, ASCN):
         if config['CleanUpRNAseqQC']:
             l.append("CleanUpRNAseqQC/Fig7.PCA.showing.sample.variability.pdf")  # QC
 
-        if config['CleanUpRNAseqCorrection']:
+        if config['CleanUpRNAseqCorrection'] and not config.get('DREAM_ANALYSIS', False):
             l.append("CleanUpRNAseqQC/global.corrected.count.csv")  # correction
-            if (config['DESEQ2_ANALYSIS'] or config['GSEA_ANALYSIS']) and not config.get('DREAM_ANALYSIS', False):
+            if config['DESEQ2_ANALYSIS'] or config['GSEA_ANALYSIS']:
                 l.append("CleanUpRNAseqDE/CleanUpRNAseqDE.html")  # DESeq2_IR (df > 1) or DESeq2_DNA_Corrected (df = 1)
 
         if config["ASSEMBLY_ANALYSIS"]:

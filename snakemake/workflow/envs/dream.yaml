@@ -5,9 +5,13 @@ channels:
 dependencies:
   - r-base=4.4
   - bioconductor-variancepartition
+  - r-reformulas
   - bioconductor-limma
   - bioconductor-edger
   - bioconductor-biocparallel
   - r-openxlsx
   - r-rmarkdown
   - r-knitr
+  - r-ggplot2
+  - r-pheatmap
+  - r-rcolorbrewer

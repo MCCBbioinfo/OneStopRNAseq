@@ -21,6 +21,9 @@ library(edgeR)
 library(limma)
 library(variancePartition)
 library(openxlsx)
+library(ggplot2)
+library(pheatmap)
+library(RColorBrewer)
 dir.create("rnk", showWarnings = FALSE)
 ```
 
@@ -60,9 +63,13 @@ n_abundance <- sum(grepl("abundance", colnames(counts.df)))
 n_counts <- sum(grepl("^counts\\.", colnames(counts.df)))
 n_lengths <- sum(grepl("^length\\.", colnames(counts.df)))
 salmon_format <- n_abundance > 0 && n_abundance == n_counts && n_counts == n_lengths
+feature_counts <- FALSE
+gene_length <- NULL
 
 if (ncol(counts.df) > 6 && colnames(counts.df)[2] %in% c("Chr", "chr") &&
     colnames(counts.df)[3] %in% c("Start", "start") && colnames(counts.df)[4] %in% c("End", "end")) {
+  feature_counts <- TRUE
+  gene_length <- setNames(suppressWarnings(as.numeric(counts.df[[6]])), gene_id)
   sample_cols <- 7:ncol(counts.df)
 } else if (colnames(counts.df)[1] %in% c("Name", "Gene") && colnames(counts.df)[2] == "Type") {
   sample_cols <- 3:ncol(counts.df)
@@ -114,12 +121,71 @@ dge <- DGEList(counts = count_mat)
 keep <- filterByExpr(dge, design0)
 dge <- dge[keep, , keep.lib.sizes = FALSE]
 dge <- calcNormFactors(dge)
+if (isTRUE(feature_counts)) gene_length <- gene_length[rownames(dge)]
 vobj <- voomWithDreamWeights(dge, form, meta.df)
+```
+
+## Sample PCA
+
+```{r pca}
+if (ncol(vobj$E) >= 3 && nrow(vobj$E) >= 2) {
+  gene_var <- apply(vobj$E, 1, var, na.rm = TRUE)
+  top_n <- min(500, sum(gene_var > 0, na.rm = TRUE))
+  if (top_n < 2) stop("Too few variable genes for PCA.")
+  top <- order(gene_var, decreasing = TRUE)[seq_len(top_n)]
+  pca <- prcomp(t(vobj$E[top, , drop = FALSE]), scale. = FALSE)
+  percent <- round(100 * pca$sdev^2 / sum(pca$sdev^2), 1)
+  plot_meta <- meta.df[match(colnames(vobj$E), meta.df$SAMPLE_LABEL), , drop = FALSE]
+  pca_df <- data.frame(
+    sample = colnames(vobj$E),
+    PC1 = pca$x[, 1],
+    PC2 = pca$x[, 2],
+    group = plot_meta$GROUP_LABEL,
+    time = plot_meta$TIME,
+    stringsAsFactors = FALSE
+  )
+  pca_plot <- ggplot(pca_df, aes(PC1, PC2, color = group, shape = time)) +
+    geom_point(size = 3) +
+    xlab(paste0("PC1: ", percent[1], "% variance")) +
+    ylab(paste0("PC2: ", percent[2], "% variance")) +
+    theme_classic()
+  if (max(nchar(pca_df$sample)) <= 36) {
+    pca_plot <- pca_plot + geom_text(aes(label = sample), vjust = -0.8, show.legend = FALSE, size = 3)
+  }
+  print(pca_plot)
+  ggsave("sample_PCA.pdf", pca_plot, width = 8, height = 6)
+} else {
+  cat("PCA needs at least 3 samples.\n")
+}
+```
+
+## Sample distance
+
+Distance is Euclidean distance on the voom log-expression values used by Dream.
+
+```{r distance}
+if (ncol(vobj$E) >= 2) {
+  sample_dist <- as.matrix(dist(t(vobj$E)))
+  plot_meta <- meta.df[match(colnames(vobj$E), meta.df$SAMPLE_LABEL), , drop = FALSE]
+  annotation <- data.frame(
+    group = plot_meta$GROUP_LABEL,
+    time = plot_meta$TIME,
+    row.names = colnames(vobj$E)
+  )
+  heat_colors <- colorRampPalette(rev(brewer.pal(9, "Blues")))(255)
+  pheatmap(sample_dist, annotation_row = annotation, clustering_method = "complete",
+           color = heat_colors, filename = "sample_distance.pdf")
+  pheatmap(sample_dist, annotation_row = annotation, clustering_method = "complete",
+           color = heat_colors)
+} else {
+  cat("Sample distance needs at least 2 samples.\n")
+}
 ```
 
 ```{r annotation}
 anno_key <- NULL
 anno_symbol <- NULL
+anno_join <- NULL
 read_anno <- function(fname) {
   if (grepl("^https?://", fname)) {
     tmp <- tempfile()
@@ -135,9 +201,11 @@ tryCatch({
   if (sum(anno[[1]] %in% rownames(count_mat)) >= 1 && "Name" %in% colnames(anno)) {
     anno_key <- anno[[1]]
     anno_symbol <- as.character(anno[["Name"]])
+    anno_join <- 1
   } else if (ncol(anno) >= 2 && sum(anno[[2]] %in% rownames(count_mat)) >= 1 && "Gene" %in% colnames(anno)) {
     anno_key <- anno[[2]]
     anno_symbol <- as.character(anno[["Gene"]])
+    anno_join <- 2
   } else {
     warning("Annotation and count IDs do not match. Rank files will use the count-table IDs.")
   }
@@ -151,6 +219,53 @@ rank_names <- function(gene_ids) {
   missing <- is.na(hit) | hit == ""
   hit[missing] <- gene_ids[missing]
   toupper(hit)
+}
+```
+
+## Expression summaries
+
+```{r expression}
+write_expression <- function(mat, suffix, fname) {
+  out <- as.data.frame(mat, check.names = FALSE)
+  colnames(out) <- paste(colnames(out), suffix, sep = ":")
+  if (!is.null(anno_join)) {
+    out <- merge(anno, out, by.x = anno_join, by.y = 0, all.y = TRUE, sort = FALSE)
+  }
+  write.xlsx(out, fname, overwrite = TRUE, keepNA = TRUE, na.string = "NA")
+  cat("saved in", fname, "\n")
+}
+
+boxplot(log10(count_mat + 1), las = 2,
+        main = "Raw count distribution", ylab = "log10(count + 1)")
+hist(log10(count_mat + 1), breaks = 100,
+     main = "Histogram of log10(count + 1)", xlab = "log10(count + 1)")
+
+lib_size <- dge$samples$lib.size * dge$samples$norm.factors
+norm_counts <- t(t(dge$counts) / lib_size) * mean(lib_size)
+boxplot(log10(norm_counts + 1), las = 2,
+        main = "TMM-normalized count distribution", ylab = "log10(normalized count + 1)")
+write_expression(norm_counts, "normalizedCount", "normalized_counts.xlsx")
+
+calculate_tpm <- function(counts, len) {
+  rate <- counts / len
+  t(t(rate) * 1e6 / colSums(rate))
+}
+calculate_fpkm <- function(counts, len) {
+  per_million <- t(t(counts) * 1e6 / colSums(counts))
+  per_million / len * 1e3
+}
+if (isTRUE(feature_counts)) {
+  len <- gene_length
+  ok <- !is.na(len) & len > 0
+  if (any(ok)) {
+    tpm <- calculate_tpm(dge$counts[ok, , drop = FALSE], len[ok])
+    fpkm <- calculate_fpkm(dge$counts[ok, , drop = FALSE], len[ok])
+    write_expression(tpm, "TPM", "TPM.xlsx")
+    write_expression(fpkm, "FPKM", "FPKM.xlsx")
+    cat("TPM is preferable to FPKM.\n")
+  }
+} else {
+  cat("TPM and FPKM are calculated only for a featureCounts table, which includes gene length.\n")
 }
 ```
 
@@ -211,6 +326,21 @@ for (j in seq_len(ncol(contrast.df))) {
   rnk <- rnk[order(rnk$log2FoldChange_shrunken), ]
   write.table(rnk, paste0("rnk/", name, ".rnk"),
               sep = "\t", quote = FALSE, row.names = FALSE)
+  volcano <- data.frame(logFC = tab$logFC, fdr = tab$adj.P.Val, stringsAsFactors = FALSE)
+  volcano$fdr[is.na(volcano$fdr)] <- 1
+  volcano$call <- "not significant"
+  hit <- volcano$fdr < params$max_fdr & abs(volcano$logFC) > params$min_lfc
+  volcano$call[hit & volcano$logFC > 0] <- "up"
+  volcano$call[hit & volcano$logFC < 0] <- "down"
+  volcano_plot <- ggplot(volcano, aes(logFC, -log10(pmax(fdr, 1e-300)), color = call)) +
+    geom_point(size = 1.2) +
+    scale_color_manual(values = c("not significant" = "grey70", up = "firebrick", down = "dodgerblue4")) +
+    geom_vline(xintercept = c(-params$min_lfc, params$min_lfc), linetype = "dashed") +
+    geom_hline(yintercept = -log10(params$max_fdr), linetype = "dashed") +
+    labs(title = name, x = "log2 fold change", y = "-log10 FDR", color = NULL) +
+    theme_classic()
+  print(volcano_plot)
+  ggsave(paste0(name, ".volcano.pdf"), volcano_plot, width = 8, height = 6)
   results[[name]] <- data.frame(contrast = name, genes = nrow(tab), significant = sum(sig))
 }
 

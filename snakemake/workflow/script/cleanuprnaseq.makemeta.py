@@ -37,6 +37,7 @@ elif fname.endswith('txt'):
     df = pd.read_table(fname, keep_default_na=False, na_values=[])
 df = df.replace("NA", "NA_")
 
+df = df.iloc[:, :3]
 df.columns = ['sample_name', 'group', 'batch']
 df['BAM_file'] = 'mapped_reads/' + df['sample_name'] + '.bam'
 

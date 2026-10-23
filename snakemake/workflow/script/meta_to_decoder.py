@@ -19,5 +19,6 @@ def read_table(fname='meta/contrast.de.xlsx'):
 
 fname = sys.argv[1]
 df = read_table(fname)
+df = df.iloc[:, :3]
 df.columns = ["sample.ID", "group.ID", "batch.ID"]
 df.to_csv("meta/decoder.txt", sep="\t", index=False)
