@@ -66,11 +66,16 @@ salmon_format <- n_abundance > 0 && n_abundance == n_counts && n_counts == n_len
 feature_counts <- FALSE
 gene_length <- NULL
 
+osr_count_cols <- grep("[,:.]COUNT$", colnames(counts.df))
 if (ncol(counts.df) > 6 && colnames(counts.df)[2] %in% c("Chr", "chr") &&
     colnames(counts.df)[3] %in% c("Start", "start") && colnames(counts.df)[4] %in% c("End", "end")) {
   feature_counts <- TRUE
   gene_length <- setNames(suppressWarnings(as.numeric(counts.df[[6]])), gene_id)
   sample_cols <- 7:ncol(counts.df)
+} else if (length(osr_count_cols) > 0 &&
+           colnames(counts.df)[1] %in% c("Gene", "Name") &&
+           any(colnames(counts.df) == "Type")) {
+  sample_cols <- osr_count_cols
 } else if (colnames(counts.df)[1] %in% c("Name", "Gene") && colnames(counts.df)[2] == "Type") {
   sample_cols <- 3:ncol(counts.df)
 } else if (salmon_format) {
@@ -87,7 +92,7 @@ colnames(count_mat) <- sub("\\.bam$", "", colnames(count_mat))
 colnames(count_mat) <- sub("^sorted_reads\\.", "", colnames(count_mat))
 colnames(count_mat) <- sub("^mapped_reads\\.", "", colnames(count_mat))
 colnames(count_mat) <- sub("^counts\\.", "", colnames(count_mat))
-colnames(count_mat) <- sub("\\.COUNT$", "", colnames(count_mat))
+colnames(count_mat) <- sub("[,:.]COUNT$", "", colnames(count_mat))
 count_mat[is.na(count_mat)] <- 0
 
 keep_samples <- meta.df$SAMPLE_LABEL %in% colnames(count_mat)
@@ -112,9 +117,30 @@ if (use_batch) {
   fixed_form <- ~ GROUP_LABEL * TIME
   form <- ~ GROUP_LABEL * TIME + (1|SUBJECT)
 }
+subjects_per_group <- tapply(as.character(meta.df$SUBJECT), meta.df$GROUP_LABEL, function(s) length(unique(s)))
+thin_groups <- names(subjects_per_group)[subjects_per_group < 2]
+if (length(thin_groups) > 0) {
+  stop(paste0(
+    "Dream needs at least two subjects in each group. A group with one subject is the same split as that subject, so ",
+    paste(deparse(form), collapse = ""),
+    " cannot estimate a subject effect. Groups with fewer than two subjects: ",
+    paste(thin_groups, collapse = ", ")
+  ))
+}
 design0 <- model.matrix(fixed_form, meta.df)
-if (qr(design0)$rank < ncol(design0)) {
-  stop("Batch cannot be estimated together with group and time. A batch is identical to a group, a time, or their combination. Use one batch label, or a batch that is shared across groups.")
+design_rank <- qr(design0)$rank
+if (design_rank < ncol(design0)) {
+  stop(paste0(
+    "The Dream model ", paste(deparse(form), collapse = ""),
+    " is not full rank. Group, time, and batch overlap, or a group is missing a time. Use one batch, or a batch shared across groups and times, and measure every group at every time."
+  ))
+}
+if (nrow(design0) <= design_rank) {
+  stop(paste0(
+    "The Dream model ", paste(deparse(form), collapse = ""),
+    " has ", nrow(design0), " samples and ", design_rank,
+    " group-by-time coefficients, so nothing is left to estimate a subject effect."
+  ))
 }
 
 dge <- DGEList(counts = count_mat)
@@ -224,16 +250,24 @@ rank_names <- function(gene_ids) {
 
 ## Expression summaries
 
+`COUNT.xlsx` is the unfiltered count table: Gene, Name, and Type, then one `Sample:COUNT` column per library.
+
 ```{r expression}
-write_expression <- function(mat, suffix, fname) {
+write_expression <- function(mat, suffix, fname, drop_cols = NULL) {
   out <- as.data.frame(mat, check.names = FALSE)
   colnames(out) <- paste(colnames(out), suffix, sep = ":")
   if (!is.null(anno_join)) {
     out <- merge(anno, out, by.x = anno_join, by.y = 0, all.y = TRUE, sort = FALSE)
   }
+  if (!is.null(drop_cols)) {
+    out <- out[, setdiff(colnames(out), drop_cols), drop = FALSE]
+  }
   write.xlsx(out, fname, overwrite = TRUE, keepNA = TRUE, na.string = "NA")
   cat("saved in", fname, "\n")
 }
+
+write_expression(count_mat, "COUNT", "COUNT.xlsx",
+                 drop_cols = c("Chr", "Strand", "Start", "End"))
 
 boxplot(log10(count_mat + 1), las = 2,
         main = "Raw count distribution", ylab = "log10(count + 1)")
