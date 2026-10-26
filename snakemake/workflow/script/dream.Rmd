@@ -14,7 +14,7 @@ params:
   contrastFile: "meta/contrast.de.xlsx"
 ---
 
-The model is `~ GROUP_LABEL * TIME + (1|SUBJECT)`. When the metadata has more than one batch, batch is added as a fixed effect, `~ GROUP_LABEL * TIME + BATCH + (1|SUBJECT)`, the same rule DESeq2 uses. A single batch is left out. Each contrast compares GROUP A with GROUP B at the reference level of TIME. Batch, TIME, and the group-by-time interaction stay in the model and are not part of the contrast.
+The model is a cell-means formula, `~ 0 + CELL + (1|SUBJECT)`. `CELL` is the observed pair of `GROUP_LABEL` and `TIME`, so each pair has its own mean. When the metadata have more than one batch, batch is added as a fixed effect, `~ 0 + CELL + BATCH + (1|SUBJECT)`. A single batch is left out. A contrast entry that matches a cell, written `GROUP_TIME` such as `Keloid_T0`, compares that cell. Several cells on one side, separated by `;`, are averaged. An entry that names a group instead, such as `Keloid`, is the group difference at every time where both sides are present. The rank file the rest of the pipeline expects keeps that contrast name and uses the reference time, the first `TIME` level, when both sides are present there. The same comparison at each other time is written with `_at_<time>` added to the name. A cell contrast is written once, under the contrast name. Batch stays in the model and is not part of the contrast.
 
 ```{r setup, include=FALSE}
 library(edgeR)
@@ -88,13 +88,10 @@ if (ncol(counts.df) > 6 && colnames(counts.df)[2] %in% c("Chr", "chr") &&
 
 count_mat <- as.matrix(suppressWarnings(apply(counts.df[, sample_cols, drop = FALSE], 2, as.numeric)))
 rownames(count_mat) <- gene_id
-# featureCounts names columns with the BAM path (mapped_reads/sample.bam).
-# Drop the directory, then a dot- or slash-separated prefix.
-colnames(count_mat) <- basename(colnames(count_mat))
 colnames(count_mat) <- sub("\\.bam$", "", colnames(count_mat))
-colnames(count_mat) <- sub("^sorted_reads[./]", "", colnames(count_mat))
-colnames(count_mat) <- sub("^mapped_reads[./]", "", colnames(count_mat))
-colnames(count_mat) <- sub("^counts[./]", "", colnames(count_mat))
+colnames(count_mat) <- sub("^sorted_reads\\.", "", colnames(count_mat))
+colnames(count_mat) <- sub("^mapped_reads\\.", "", colnames(count_mat))
+colnames(count_mat) <- sub("^counts\\.", "", colnames(count_mat))
 colnames(count_mat) <- sub("[,:.]COUNT$", "", colnames(count_mat))
 count_mat[is.na(count_mat)] <- 0
 
@@ -108,17 +105,18 @@ meta.df$GROUP_LABEL <- droplevels(meta.df$GROUP_LABEL)
 meta.df$TIME <- droplevels(meta.df$TIME)
 meta.df$SUBJECT <- droplevels(meta.df$SUBJECT)
 meta.df$BATCH <- droplevels(meta.df$BATCH)
+meta.df$CELL <- factor(paste(as.character(meta.df$GROUP_LABEL), as.character(meta.df$TIME), sep = "_"))
 count_mat <- count_mat[, meta.df$SAMPLE_LABEL, drop = FALSE]
 ```
 
 ```{r fit}
 use_batch <- nlevels(meta.df$BATCH) > 1
 if (use_batch) {
-  fixed_form <- ~ GROUP_LABEL * TIME + BATCH
-  form <- ~ GROUP_LABEL * TIME + BATCH + (1|SUBJECT)
+  fixed_form <- ~ 0 + CELL + BATCH
+  form <- ~ 0 + CELL + BATCH + (1|SUBJECT)
 } else {
-  fixed_form <- ~ GROUP_LABEL * TIME
-  form <- ~ GROUP_LABEL * TIME + (1|SUBJECT)
+  fixed_form <- ~ 0 + CELL
+  form <- ~ 0 + CELL + (1|SUBJECT)
 }
 subjects_per_group <- tapply(as.character(meta.df$SUBJECT), meta.df$GROUP_LABEL, function(s) length(unique(s)))
 thin_groups <- names(subjects_per_group)[subjects_per_group < 2]
@@ -135,14 +133,14 @@ design_rank <- qr(design0)$rank
 if (design_rank < ncol(design0)) {
   stop(paste0(
     "The Dream model ", paste(deparse(form), collapse = ""),
-    " is not full rank. Group, time, and batch overlap, or a group is missing a time. Use one batch, or a batch shared across groups and times, and measure every group at every time."
+    " is not full rank. A batch matches a group-by-time cell, or two cells are identical. Use one batch, or a batch shared across cells."
   ))
 }
 if (nrow(design0) <= design_rank) {
   stop(paste0(
     "The Dream model ", paste(deparse(form), collapse = ""),
     " has ", nrow(design0), " samples and ", design_rank,
-    " group-by-time coefficients, so nothing is left to estimate a subject effect."
+    " cell-mean coefficients, so nothing is left to estimate a subject effect."
   ))
 }
 
@@ -318,42 +316,110 @@ contrast_name <- function(numerator, denominator, index) {
   gsub("-", ".", name)
 }
 
-group_contrast <- function(data, numerator, denominator, fixed_form) {
-  design <- model.matrix(fixed_form, data)
-  L <- setNames(numeric(ncol(design)), colnames(design))
-  ref <- levels(data$GROUP_LABEL)[1]
-  add_side <- function(L, groups, sign) {
-    groups <- trimws(unlist(strsplit(groups, ";")))
-    groups <- groups[groups != ""]
-    if (length(groups) == 0) return(L)
-    weight <- sign / length(groups)
-    for (g in groups) {
-      if (g == ref) next
-      coef_name <- paste0("GROUP_LABEL", g)
-      if (!coef_name %in% names(L)) stop("No coefficient for group ", g)
+split_groups <- function(x) {
+  groups <- trimws(unlist(strsplit(as.character(x), ";")))
+  groups[groups != ""]
+}
+
+groups_at_time <- function(data, groups, time) {
+  all(vapply(groups, function(g) {
+    any(data$GROUP_LABEL == g & data$TIME == time)
+  }, logical(1)))
+}
+
+cell_ids <- levels(meta.df$CELL)
+group_ids <- levels(meta.df$GROUP_LABEL)
+
+token_kind <- function(tokens) {
+  if (length(tokens) == 0) stop("A contrast side has no entries.")
+  kinds <- vapply(tokens, function(token) {
+    if (token %in% cell_ids) {
+      "cell"
+    } else if (token %in% group_ids) {
+      "group"
+    } else {
+      stop("Contrast entry '", token, "' is not a group or a group_time cell. A cell is written as group_time, for example Keloid_T0.")
+    }
+  }, character(1))
+  if (length(unique(kinds)) > 1) {
+    stop("One contrast cannot mix group names and group_time cells: ", paste(tokens, collapse = ", "))
+  }
+  kinds[[1]]
+}
+
+cell_times <- function(tokens) {
+  hit <- meta.df$TIME[match(tokens, as.character(meta.df$CELL))]
+  paste(unique(as.character(hit[!is.na(hit)])), collapse = "+")
+}
+
+weighted_contrast <- function(coef_names, numerator, denominator, coef_of) {
+  L <- setNames(numeric(length(coef_names)), coef_names)
+  add_side <- function(L, tokens, sign) {
+    if (length(tokens) == 0) stop("A contrast side has no entries.")
+    weight <- sign / length(tokens)
+    for (token in tokens) {
+      coef_name <- coef_of(token)
+      if (!coef_name %in% names(L)) stop("No coefficient for ", token)
       L[coef_name] <- L[coef_name] + weight
     }
     L
   }
-  L <- add_side(L, numerator, 1)
-  L <- add_side(L, denominator, -1)
-  if (!any(L != 0)) stop("Contrast has no group difference: ", numerator, " vs ", denominator)
+  L <- add_side(L, split_groups(numerator), 1)
+  L <- add_side(L, split_groups(denominator), -1)
+  if (!any(L != 0)) stop("Contrast has no difference: ", numerator, " vs ", denominator)
   L
 }
 
-results <- list()
+coef_names <- colnames(design0)
+planned <- list()
 for (j in seq_len(ncol(contrast.df))) {
   numerator <- as.character(contrast.df[1, j])
   denominator <- as.character(contrast.df[2, j])
   if (is.na(numerator) || is.na(denominator) || numerator == "" || denominator == "") next
-  name <- contrast_name(numerator, denominator, j)
-  L <- group_contrast(meta.df, numerator, denominator, fixed_form)
-  Lmat <- matrix(L, ncol = 1, dimnames = list(names(L), name))
-  fit <- dream(vobj, form, meta.df, Lmat)
-  fit <- eBayes(fit)
+  base <- contrast_name(numerator, denominator, j)
+  num_tokens <- split_groups(numerator)
+  den_tokens <- split_groups(denominator)
+  kind <- token_kind(c(num_tokens, den_tokens))
+  if (kind == "cell") {
+    planned[[length(planned) + 1]] <- list(
+      name = base,
+      time = paste0(cell_times(num_tokens), " vs ", cell_times(den_tokens)),
+      primary = TRUE,
+      specified = TRUE,
+      L = weighted_contrast(coef_names, numerator, denominator, function(token) paste0("CELL", token))
+    )
+  } else {
+    testable <- levels(meta.df$TIME)[vapply(levels(meta.df$TIME), function(time) {
+      groups_at_time(meta.df, c(num_tokens, den_tokens), time)
+    }, logical(1))]
+    if (length(testable) == 0) {
+      stop("Contrast ", base, " has no time where both sides are present.")
+    }
+    ref_time <- levels(meta.df$TIME)[1]
+    primary <- if (ref_time %in% testable) ref_time else testable[1]
+    for (time in testable) {
+      out_name <- if (time == primary) base else paste0(base, "_at_", gsub("-", ".", time))
+      planned[[length(planned) + 1]] <- list(
+        name = out_name, time = time, primary = time == primary, specified = FALSE,
+        L = weighted_contrast(coef_names, numerator, denominator, function(token) paste0("CELL", token, "_", time))
+      )
+    }
+  }
+}
+if (length(planned) == 0) stop("The contrast file has no comparisons.")
+
+Lmat <- do.call(cbind, lapply(planned, `[[`, "L"))
+colnames(Lmat) <- vapply(planned, function(item) item$name, character(1))
+fit <- dream(vobj, form, meta.df, Lmat)
+fit <- eBayes(fit)
+
+results <- list()
+for (item in planned) {
+  name <- item$name
   tab <- topTable(fit, coef = name, number = Inf, sort.by = "none")
   tab$gene <- rownames(tab)
   tab$contrast <- name
+  tab$time <- item$time
   sig <- !is.na(tab$adj.P.Val) & tab$adj.P.Val < params$max_fdr & abs(tab$logFC) > params$min_lfc
   write.xlsx(tab, paste0(name, ".dream.xlsx"), overwrite = TRUE)
   write.xlsx(tab[sig, , drop = FALSE],
@@ -374,11 +440,15 @@ for (j in seq_len(ncol(contrast.df))) {
     scale_color_manual(values = c("not significant" = "grey70", up = "firebrick", down = "dodgerblue4")) +
     geom_vline(xintercept = c(-params$min_lfc, params$min_lfc), linetype = "dashed") +
     geom_hline(yintercept = -log10(params$max_fdr), linetype = "dashed") +
-    labs(title = name, x = "log2 fold change", y = "-log10 FDR", color = NULL) +
+    labs(title = if (isTRUE(item$specified)) name else paste0(name, " at ", item$time),
+         x = "log2 fold change", y = "-log10 FDR", color = NULL) +
     theme_classic()
   print(volcano_plot)
   ggsave(paste0(name, ".volcano.pdf"), volcano_plot, width = 8, height = 6)
-  results[[name]] <- data.frame(contrast = name, genes = nrow(tab), significant = sum(sig))
+  results[[name]] <- data.frame(
+    contrast = name, time = item$time, pipeline_rank_file = item$primary,
+    genes = nrow(tab), significant = sum(sig)
+  )
 }
 
 knitr::kable(do.call(rbind, results))
@@ -391,6 +461,7 @@ cat("Times:", paste(levels(meta.df$TIME), collapse = ", "), "\n")
 cat("Groups:", paste(levels(meta.df$GROUP_LABEL), collapse = ", "), "\n")
 cat("Batches:", paste(levels(meta.df$BATCH), collapse = ", "), "\n")
 cat("Formula:", paste(deparse(form), collapse = " "), "\n")
-cat("Reference time for the group contrast:", levels(meta.df$TIME)[1], "\n")
+cat("Reference time:", levels(meta.df$TIME)[1], "\n")
+cat("Cells:", paste(levels(meta.df$CELL), collapse = ", "), "\n")
 print(table(Subject = meta.df$SUBJECT, Time = meta.df$TIME, Group = meta.df$GROUP_LABEL, Batch = meta.df$BATCH))
 ```
