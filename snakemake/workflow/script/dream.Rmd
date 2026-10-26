@@ -92,17 +92,10 @@ rownames(count_mat) <- gene_id
 # Drop the directory, then a dot- or slash-separated prefix.
 colnames(count_mat) <- basename(colnames(count_mat))
 colnames(count_mat) <- sub("\\.bam$", "", colnames(count_mat))
-<<<<<<< HEAD
-colnames(count_mat) <- sub("^sorted_reads\\.", "", colnames(count_mat))
-colnames(count_mat) <- sub("^mapped_reads\\.", "", colnames(count_mat))
-colnames(count_mat) <- sub("^counts\\.", "", colnames(count_mat))
-colnames(count_mat) <- sub("[,:.]COUNT$", "", colnames(count_mat))
-=======
 colnames(count_mat) <- sub("^sorted_reads[./]", "", colnames(count_mat))
 colnames(count_mat) <- sub("^mapped_reads[./]", "", colnames(count_mat))
 colnames(count_mat) <- sub("^counts[./]", "", colnames(count_mat))
-colnames(count_mat) <- sub("\\.COUNT$", "", colnames(count_mat))
->>>>>>> 4b8ae35d5aa963cd859825a94ba85b60ca59660b
+colnames(count_mat) <- sub("[,:.]COUNT$", "", colnames(count_mat))
 count_mat[is.na(count_mat)] <- 0
 
 keep_samples <- meta.df$SAMPLE_LABEL %in% colnames(count_mat)
