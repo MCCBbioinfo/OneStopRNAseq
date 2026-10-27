@@ -425,8 +425,8 @@ for (item in planned) {
   write.xlsx(tab[sig, , drop = FALSE],
              paste0(name, ".dream.sig.FDR", params$max_fdr, ".LFC", params$min_lfc, ".xlsx"),
              overwrite = TRUE)
-  rnk <- data.frame(`# Name` = rank_names(tab$gene), log2FoldChange_shrunken = tab$logFC, check.names = FALSE)
-  rnk <- rnk[order(rnk$log2FoldChange_shrunken), ]
+  rnk <- data.frame(`# Name` = rank_names(tab$gene), log2FoldChange = tab$logFC, check.names = FALSE)
+  rnk <- rnk[order(rnk$log2FoldChange), ]
   write.table(rnk, paste0("rnk/", name, ".rnk"),
               sep = "\t", quote = FALSE, row.names = FALSE)
   volcano <- data.frame(logFC = tab$logFC, fdr = tab$adj.P.Val, stringsAsFactors = FALSE)
